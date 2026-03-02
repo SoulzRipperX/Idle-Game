@@ -32,4 +32,21 @@ public class StoreUpgrade : MonoBehaviour
     {
         return incomePerLevel * level;
     }
+
+    public void Purchase()
+    {
+        double price = CalculatePrice();
+
+        if (GameManager.Instance.SpendMoney(price))
+        {
+            level++;
+            UpdateUI();
+        }
+    }
+
+    void UpdateUI()
+    {
+        priceText.text = CalculatePrice().ToString("F1");
+        button.interactable = GameManager.Instance.Money >= CalculatePrice();
+    }
 }
