@@ -1,20 +1,42 @@
+﻿using TMPro;
 using UnityEngine;
-using TMPro;
 
 public class FloatingText : MonoBehaviour
 {
-    [SerializeField] private TextMeshProUGUI text;
-    private float lifeTime = 1f;
+    [SerializeField] private float moveSpeed = 120f;
+    [SerializeField] private float lifeTime = 3f;
+    [SerializeField] private float randomXSpeed = 80f;
 
-    public void Show(string message)
+    private TextMeshProUGUI text;
+    private RectTransform rectTransform;
+    private float timer;
+    private float xSpeed;
+
+    private void Awake()
     {
-        text.text = message;
-        gameObject.SetActive(true);
-        Invoke(nameof(Hide), lifeTime);
+        text = GetComponent<TextMeshProUGUI>();
+        rectTransform = GetComponent<RectTransform>();
     }
 
-    void Hide()
+    public void Setup(string message)
     {
-        gameObject.SetActive(false);
+        text.text = message;
+        timer = lifeTime;
+
+        rectTransform.localScale = Vector3.one;
+
+        xSpeed = Random.Range(-randomXSpeed, randomXSpeed);
+    }
+
+    private void Update()
+    {
+        rectTransform.anchoredPosition += new Vector2(xSpeed, moveSpeed) * Time.deltaTime;
+
+        timer -= Time.deltaTime;
+
+        if (timer <= 0f)
+        {
+            gameObject.SetActive(false);
+        }
     }
 }

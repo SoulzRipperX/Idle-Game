@@ -40,13 +40,14 @@ public class StoreUpgrade : MonoBehaviour
         if (GameManager.Instance.SpendMoney(price))
         {
             level++;
-            UpdateUI();
+            GameManager.Instance.SaveGame();
+            UpdateUI(GameManager.Instance.Money);
         }
     }
 
-    void UpdateUI()
+    void UpdateUI(double _)
     {
-        priceText.text = CalculatePrice().ToString("F1");
+        priceText.text = GameManager.Instance.FormatMoney((float)CalculatePrice());
         button.interactable = GameManager.Instance.Money >= CalculatePrice();
     }
 }

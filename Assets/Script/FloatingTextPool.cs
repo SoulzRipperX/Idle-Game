@@ -1,5 +1,5 @@
-using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine;
 
 public class FloatingTextPool : MonoBehaviour
 {
@@ -8,7 +8,7 @@ public class FloatingTextPool : MonoBehaviour
 
     private List<FloatingText> pool = new List<FloatingText>();
 
-    void Start()
+    private void Start()
     {
         for (int i = 0; i < poolSize; i++)
         {
@@ -20,13 +20,28 @@ public class FloatingTextPool : MonoBehaviour
 
     public void Spawn(string message)
     {
-        foreach (var obj in pool)
+        FloatingText obj = GetFromPool();
+
+        obj.transform.SetParent(transform, false);
+
+        RectTransform rect = obj.GetComponent<RectTransform>();
+        rect.anchoredPosition = Vector2.zero;
+
+        obj.gameObject.SetActive(true);
+        obj.Setup(message);
+    }
+
+    private FloatingText GetFromPool()
+    {
+        foreach (FloatingText obj in pool)
         {
             if (!obj.gameObject.activeInHierarchy)
-            {
-                obj.Show(message);
-                return;
-            }
+                return obj;
         }
+
+        FloatingText newObj = Instantiate(prefab, transform);
+        newObj.gameObject.SetActive(false);
+        pool.Add(newObj);
+        return newObj;
     }
 }
