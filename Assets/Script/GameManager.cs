@@ -1,11 +1,56 @@
-using UnityEngine;
-using TMPro;
 using System;
+using System.Collections.Generic;
+using System.Globalization;
+using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
-    // ---------------- Singleton ----------------
+    // Singleton Pattern
     public static GameManager Instance { get; private set; }
+
+    // Observer Pattern
+    public static event Action<double> OnMoneyChanged;
+    public static event Action<double> OnIncomeChanged;
+    public static event Action<bool> OnAutoStateChanged;
+
+    [Header("Idle Settings")]
+    [SerializeField] private float updatesPerSecond = 5f;
+    [SerializeField] private StoreUpgrade[] storeUpgrades;
+
+    [Header("Auto Settings")]
+    [SerializeField] private double autoClickPower = 1;
+    [SerializeField] private float autoInterval = 1f;
+
+    [Header("Save Settings")]
+    [SerializeField] private float autoSaveInterval = 10f;
+
+    public double Money { get; private set; }
+    public double IncomePerSecond { get; private set; }
+    public bool AutoEnabled { get; private set; }
+    private double potentialIncomePerSecond;
+
+    private const string SaveKey = "GameSaveData_v2";
+
+    private float idleTimer;
+    private float autoTimer;
+    private float saveTimer;
+    private bool hasPendingSave;
+
+    [Serializable]
+    private class UpgradeSave
+    {
+        public string id;
+        public int level;
+    }
+
+    [Serializable]
+    private class SaveData
+    {
+        public string money;
+        public int autoEnabled;
+        public string autoPower;
+        public List<UpgradeSave> upgrades = new List<UpgradeSave>();
+    }
 
     private void Awake()
     {
@@ -19,144 +64,257 @@ public class GameManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
-    // ---------------- Observer ----------------
-    public static event Action<double> OnMoneyChanged;
-    public static event Action<double> OnIncomeChanged;
-    public static event Action<bool> OnAutoStateChanged;
-
-    [Header("Idle Settings")]
-    [SerializeField] private float updatesPerSecond = 5f;
-    [SerializeField] private StoreUpgrade[] storeUpgrades;
-
-    [Header("Auto Settings")]
-    [SerializeField] private double autoClickPower = 1;
-    [SerializeField] private float autoInterval = 1f;
-
-    public double Money { get; private set; }
-    public double IncomePerSecond { get; private set; }
-
-    public bool AutoEnabled { get; private set; }
-
-    private float timer;
-    private float autoTimer;
-
-    void Start()
+    private void Start()
     {
         LoadGame();
-        OnMoneyChanged?.Invoke(Money);
+        NotifyObservers();
     }
 
-    void Update()
+    private void Update()
     {
-        timer += Time.deltaTime;
-        autoTimer += Time.deltaTime;
+        float delta = Time.deltaTime;
+        float idleStep = 1f / Mathf.Max(0.01f, updatesPerSecond);
 
-        if (timer >= 1f / updatesPerSecond)
+        idleTimer += delta;
+        autoTimer += delta;
+        saveTimer += delta;
+
+        while (idleTimer >= idleStep)
         {
-            CalculateIdle();
-            timer = 0f;
+            ProcessIdleTick(idleStep);
+            idleTimer -= idleStep;
         }
 
-        if (AutoEnabled && autoTimer >= autoInterval)
+        if (AutoEnabled)
         {
-            AddMoney(autoClickPower);
-            autoTimer = 0f;
+            float safeInterval = Mathf.Max(0.05f, autoInterval);
+            while (autoTimer >= safeInterval)
+            {
+                AddMoney(autoClickPower);
+                autoTimer -= safeInterval;
+            }
+        }
+
+        if (saveTimer >= Mathf.Max(1f, autoSaveInterval))
+        {
+            saveTimer = 0f;
+            if (hasPendingSave)
+            {
+                SaveGame();
+            }
         }
     }
-
 
     public void AddMoney(double amount)
     {
+        if (amount <= 0d) return;
+
         Money += amount;
+        hasPendingSave = true;
         OnMoneyChanged?.Invoke(Money);
     }
 
     public bool SpendMoney(double amount)
     {
-        if (Money >= amount)
-        {
-            Money -= amount;
-            OnMoneyChanged?.Invoke(Money);
-            return true;
-        }
-        return false;
-    }
+        if (amount <= 0d || Money < amount)
+            return false;
 
-    void CalculateIdle()
-    {
-        double sum = 0;
-
-        foreach (var upgrade in storeUpgrades)
-            sum += upgrade.CalculateIncomePerSecond();
-
-        IncomePerSecond = sum;
-
-        Money += sum / updatesPerSecond;
-
-        OnIncomeChanged?.Invoke(IncomePerSecond);
+        Money -= amount;
+        hasPendingSave = true;
         OnMoneyChanged?.Invoke(Money);
+        return true;
     }
-
 
     public void ToggleAuto()
     {
         AutoEnabled = !AutoEnabled;
+        hasPendingSave = true;
+        RecalculateIncome();
         OnAutoStateChanged?.Invoke(AutoEnabled);
         SaveGame();
     }
 
     public void UpgradeAuto(double amount)
     {
+        if (amount <= 0d) return;
+
         autoClickPower += amount;
-        SaveGame();
+        hasPendingSave = true;
     }
 
+    public void HandleUpgradeStateChanged()
+    {
+        RecalculateIncome();
+        hasPendingSave = true;
+        NotifyObservers();
+    }
 
     public void SaveGame()
     {
-        PlayerPrefs.SetString("Money", Money.ToString());
-        PlayerPrefs.SetInt("AutoEnabled", AutoEnabled ? 1 : 0);
-        PlayerPrefs.SetString("AutoPower", autoClickPower.ToString());
+        SaveData data = new SaveData
+        {
+            money = Money.ToString("R", CultureInfo.InvariantCulture),
+            autoEnabled = AutoEnabled ? 1 : 0,
+            autoPower = autoClickPower.ToString("R", CultureInfo.InvariantCulture)
+        };
 
         foreach (var upgrade in storeUpgrades)
         {
-            PlayerPrefs.SetInt("Upgrade_" + upgrade.upgradeName, upgrade.level);
+            if (upgrade == null) continue;
+            data.upgrades.Add(new UpgradeSave
+            {
+                id = upgrade.UpgradeId,
+                level = upgrade.Level
+            });
         }
 
+        string json = JsonUtility.ToJson(data);
+        PlayerPrefs.SetString(SaveKey, json);
         PlayerPrefs.Save();
+        hasPendingSave = false;
     }
 
     public void LoadGame()
     {
-        if (PlayerPrefs.HasKey("Money"))
-            Money = double.Parse(PlayerPrefs.GetString("Money"));
-
-        AutoEnabled = PlayerPrefs.GetInt("AutoEnabled", 0) == 1;
-
-        if (PlayerPrefs.HasKey("AutoPower"))
-            autoClickPower = double.Parse(PlayerPrefs.GetString("AutoPower"));
-
-        foreach (var upgrade in storeUpgrades)
+        if (PlayerPrefs.HasKey(SaveKey))
         {
-            upgrade.level = PlayerPrefs.GetInt("Upgrade_" + upgrade.upgradeName, 0);
+            ApplySaveData(JsonUtility.FromJson<SaveData>(PlayerPrefs.GetString(SaveKey)));
+        }
+        else
+        {
+            LoadLegacySave();
         }
 
-        OnAutoStateChanged?.Invoke(AutoEnabled);
+        RecalculateIncome();
+        hasPendingSave = false;
     }
-    public string FormatMoney(float value)
+
+    public string FormatMoney(double value)
     {
-        if (value >= 1000000000)
-            return (value / 1000000000f).ToString("F1") + "B";
-        if (value >= 1000000)
-            return (value / 1000000f).ToString("F1") + "M";
-        if (value >= 1000)
-            return (value / 1000f).ToString("F1") + "K";
+        if (value >= 1_000_000_000d)
+            return (value / 1_000_000_000d).ToString("F1") + "B";
+        if (value >= 1_000_000d)
+            return (value / 1_000_000d).ToString("F1") + "M";
+        if (value >= 1_000d)
+            return (value / 1_000d).ToString("F1") + "K";
 
         return value.ToString("F1");
     }
 
+    private void ProcessIdleTick(float tickDuration)
+    {
+        RecalculateIncome();
+
+        if (IncomePerSecond <= 0d) return;
+
+        Money += IncomePerSecond * tickDuration;
+        hasPendingSave = true;
+        OnMoneyChanged?.Invoke(Money);
+    }
+
+    private void LoadLegacySave()
+    {
+        if (PlayerPrefs.HasKey("Money"))
+            Money = ParseDouble(PlayerPrefs.GetString("Money"), 0d);
+
+        AutoEnabled = PlayerPrefs.GetInt("AutoEnabled", 0) == 1;
+
+        if (PlayerPrefs.HasKey("AutoPower"))
+            autoClickPower = ParseDouble(PlayerPrefs.GetString("AutoPower"), autoClickPower);
+
+        foreach (var upgrade in storeUpgrades)
+        {
+            if (upgrade == null) continue;
+            int level = PlayerPrefs.GetInt("Upgrade_" + upgrade.upgradeName, 0);
+            upgrade.SetLevel(level);
+        }
+    }
+
+    private void ApplySaveData(SaveData data)
+    {
+        if (data == null)
+        {
+            LoadLegacySave();
+            return;
+        }
+
+        Money = ParseDouble(data.money, 0d);
+        AutoEnabled = data.autoEnabled == 1;
+        autoClickPower = ParseDouble(data.autoPower, autoClickPower);
+
+        foreach (var upgrade in storeUpgrades)
+        {
+            if (upgrade == null) continue;
+            upgrade.SetLevel(0);
+        }
+
+        if (data.upgrades == null) return;
+
+        foreach (var saved in data.upgrades)
+        {
+            if (saved == null || string.IsNullOrWhiteSpace(saved.id)) continue;
+            StoreUpgrade upgrade = FindUpgrade(saved.id);
+            if (upgrade != null)
+                upgrade.SetLevel(saved.level);
+        }
+    }
+
+    private StoreUpgrade FindUpgrade(string id)
+    {
+        foreach (var upgrade in storeUpgrades)
+        {
+            if (upgrade == null) continue;
+            if (string.Equals(upgrade.UpgradeId, id, StringComparison.Ordinal))
+                return upgrade;
+        }
+
+        return null;
+    }
+
+    private void RecalculateIncome()
+    {
+        double sum = 0d;
+
+        foreach (var upgrade in storeUpgrades)
+        {
+            if (upgrade == null) continue;
+            sum += upgrade.CalculateIncomePerSecond();
+        }
+
+        potentialIncomePerSecond = sum;
+        IncomePerSecond = AutoEnabled ? potentialIncomePerSecond : 0d;
+        OnIncomeChanged?.Invoke(IncomePerSecond);
+    }
+
+    private void NotifyObservers()
+    {
+        OnMoneyChanged?.Invoke(Money);
+        OnIncomeChanged?.Invoke(IncomePerSecond);
+        OnAutoStateChanged?.Invoke(AutoEnabled);
+    }
+
+    private static double ParseDouble(string value, double fallback)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return fallback;
+
+        if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double result))
+            return result;
+
+        if (double.TryParse(value, out result))
+            return result;
+
+        return fallback;
+    }
+
+    private void OnApplicationPause(bool pauseStatus)
+    {
+        if (pauseStatus && hasPendingSave)
+            SaveGame();
+    }
+
     private void OnApplicationQuit()
     {
-        SaveGame();
+        if (hasPendingSave)
+            SaveGame();
     }
 }

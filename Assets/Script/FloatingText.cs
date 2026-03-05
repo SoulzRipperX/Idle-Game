@@ -1,4 +1,4 @@
-﻿using TMPro;
+using TMPro;
 using UnityEngine;
 
 public class FloatingText : MonoBehaviour
@@ -9,6 +9,8 @@ public class FloatingText : MonoBehaviour
 
     private TextMeshProUGUI text;
     private RectTransform rectTransform;
+    private FloatingTextPool ownerPool;
+
     private float timer;
     private float xSpeed;
 
@@ -18,25 +20,32 @@ public class FloatingText : MonoBehaviour
         rectTransform = GetComponent<RectTransform>();
     }
 
+    public void SetOwner(FloatingTextPool pool)
+    {
+        ownerPool = pool;
+    }
+
     public void Setup(string message)
     {
         text.text = message;
         timer = lifeTime;
-
         rectTransform.localScale = Vector3.one;
-
         xSpeed = Random.Range(-randomXSpeed, randomXSpeed);
     }
 
     private void Update()
     {
         rectTransform.anchoredPosition += new Vector2(xSpeed, moveSpeed) * Time.deltaTime;
-
         timer -= Time.deltaTime;
 
-        if (timer <= 0f)
+        if (timer > 0f) return;
+
+        if (ownerPool != null)
         {
-            gameObject.SetActive(false);
+            ownerPool.Return(this);
+            return;
         }
+
+        gameObject.SetActive(false);
     }
 }

@@ -12,6 +12,13 @@ public class UIManager : MonoBehaviour
         GameManager.OnMoneyChanged += UpdateMoney;
         GameManager.OnIncomeChanged += UpdateIncome;
         GameManager.OnAutoStateChanged += UpdateAuto;
+
+        if (GameManager.Instance != null)
+        {
+            UpdateMoney(GameManager.Instance.Money);
+            UpdateIncome(GameManager.Instance.IncomePerSecond);
+            UpdateAuto(GameManager.Instance.AutoEnabled);
+        }
     }
 
     private void OnDisable()
@@ -21,28 +28,31 @@ public class UIManager : MonoBehaviour
         GameManager.OnAutoStateChanged -= UpdateAuto;
     }
 
-    void UpdateMoney(double value)
+    private void UpdateMoney(double value)
     {
-        moneyText.text = Format(value);
+        if (moneyText != null)
+            moneyText.text = Format(value);
     }
 
-    void UpdateIncome(double value)
+    private void UpdateIncome(double value)
     {
-        incomeText.text = Format(value) + " /s";
+        if (incomeText != null)
+            incomeText.text = Format(value) + " /s";
     }
 
-    void UpdateAuto(bool state)
+    private void UpdateAuto(bool state)
     {
-        autoText.text = state ? "AUTO: ON" : "AUTO: OFF";
+        if (autoText != null)
+            autoText.text = state ? "AUTO: ON" : "AUTO: OFF";
     }
 
-    string Format(double num)
+    private string Format(double num)
     {
-        if (num >= 1_000_000_000)
+        if (num >= 1_000_000_000d)
             return (num / 1_000_000_000d).ToString("F1") + "B";
-        if (num >= 1_000_000)
+        if (num >= 1_000_000d)
             return (num / 1_000_000d).ToString("F1") + "M";
-        if (num >= 1_000)
+        if (num >= 1_000d)
             return (num / 1_000d).ToString("F1") + "K";
 
         return num.ToString("F1");

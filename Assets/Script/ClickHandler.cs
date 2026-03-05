@@ -3,15 +3,19 @@ using UnityEngine;
 public class ClickHandler : MonoBehaviour
 {
     [SerializeField] private FloatingTextPool pool;
-    [SerializeField] private int clickPower = 1;
+    [SerializeField] private double clickPower = 1;
 
     public void Click()
     {
+        if (GameManager.Instance == null)
+            return;
+
         GameManager.Instance.AddMoney(clickPower);
 
-        if (pool != null)
+        FloatingTextPool targetPool = pool != null ? pool : FloatingTextPool.Instance;
+        if (targetPool != null)
         {
-            pool.Spawn("+" + clickPower);
+            targetPool.Spawn("+" + clickPower.ToString("F0"));
         }
     }
 }
