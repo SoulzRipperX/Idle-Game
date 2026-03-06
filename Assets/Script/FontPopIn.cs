@@ -12,7 +12,7 @@ public class FontPopIn : MonoBehaviour
 
     void Awake()
     {
-        originalScale = Vector3.one;
+        originalScale = transform.localScale;
     }
 
     void OnEnable()

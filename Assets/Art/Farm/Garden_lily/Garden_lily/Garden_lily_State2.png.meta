@@ -152,10 +152,10 @@ TextureImporter:
       name: Garden_lily_State2_0
       rect:
         serializedVersion: 2
-        x: 325
-        y: 83
-        width: 1398
-        height: 1020
+        x: 289
+        y: 66
+        width: 1470
+        height: 1037
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -163,8 +163,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 2fedaf8b9da1ce44e87fabc7048eca87
-      internalID: 609794277
+      spriteID: cf15841e3a3258f429fedee47298f61f
+      internalID: -1917030310
       vertices: []
       indices: 
       edges: []
@@ -180,7 +180,7 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     nameFileIdTable:
-      Garden_lily_State2_0: 609794277
+      Garden_lily_State2_0: -1917030310
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

@@ -1,6 +1,7 @@
 using TMPro;
 using UnityEngine;
 
+[RequireComponent(typeof(TMP_Text))]
 public class FontWave : MonoBehaviour
 {
     public float amplitude = 5f;
@@ -13,10 +14,17 @@ public class FontWave : MonoBehaviour
     void Awake()
     {
         text = GetComponent<TMP_Text>();
+        if (text == null)
+        {
+            enabled = false;
+            return;
+        }
     }
 
     void Update()
     {
+        if (text == null) return;
+
         text.ForceMeshUpdate();
         textInfo = text.textInfo;
 

@@ -3,13 +3,23 @@ using UnityEngine;
 public class ClickHandler : MonoBehaviour
 {
     [SerializeField] private FloatingTextPool pool;
+    [SerializeField] private PlantPlot targetPlot;
+    [SerializeField] private AudioClip clickSfx;
+
+    private void Awake()
+    {
+        if (targetPlot == null)
+            targetPlot = GetComponent<PlantPlot>();
+    }
 
     public void Click()
     {
         if (GameManager.Instance == null)
             return;
 
-        double ripeCount = GameManager.Instance.WaterByClick();
+        bool becameRipe = GameManager.Instance.WaterPlotByClick(targetPlot);
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlayPlotClick(clickSfx);
 
         FloatingTextPool targetPool = pool != null ? pool : FloatingTextPool.Instance;
         if (targetPool == null)
@@ -19,8 +29,8 @@ public class ClickHandler : MonoBehaviour
         if (Input.touchCount > 0)
             pointerPos = Input.GetTouch(0).position;
 
-        if (ripeCount > 0d)
-            targetPool.SpawnAtScreenPosition("Ready x" + ripeCount.ToString("F0"), pointerPos);
+        if (becameRipe)
+            targetPool.SpawnAtScreenPosition("Ready", pointerPos);
         else
             targetPool.SpawnAtScreenPosition("Water", pointerPos);
     }

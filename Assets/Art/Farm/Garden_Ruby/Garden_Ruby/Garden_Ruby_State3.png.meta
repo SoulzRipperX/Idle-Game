@@ -152,10 +152,10 @@ TextureImporter:
       name: Garden_Ruby_State3_0
       rect:
         serializedVersion: 2
-        x: 325
-        y: 83
-        width: 1398
-        height: 1189
+        x: 289
+        y: 66
+        width: 1470
+        height: 1206
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -163,8 +163,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 26a16ca7d249c4b4cb0b1fd91c2cc255
-      internalID: 1748052394
+      spriteID: 5834213f6ffb17c4a9a9d45cd5881cb7
+      internalID: -1617112896
       vertices: []
       indices: 
       edges: []
@@ -180,7 +180,7 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     nameFileIdTable:
-      Garden_Ruby_State3_0: 1748052394
+      Garden_Ruby_State3_0: -1617112896
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

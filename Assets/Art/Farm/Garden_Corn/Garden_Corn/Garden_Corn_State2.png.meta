@@ -152,10 +152,10 @@ TextureImporter:
       name: Garden_Corn_State2_0
       rect:
         serializedVersion: 2
-        x: 325
-        y: 83
-        width: 1398
-        height: 1150
+        x: 289
+        y: 66
+        width: 1470
+        height: 1167
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -163,8 +163,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 3b12517384f4f3f4dac8af0a420f1825
-      internalID: 992905538
+      spriteID: c07dd4a7745226b4fa01e71903b47317
+      internalID: 979214912
       vertices: []
       indices: 
       edges: []
@@ -180,7 +180,7 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     nameFileIdTable:
-      Garden_Corn_State2_0: 992905538
+      Garden_Corn_State2_0: 979214912
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

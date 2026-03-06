@@ -152,10 +152,10 @@ TextureImporter:
       name: Dirt_0
       rect:
         serializedVersion: 2
-        x: 325
-        y: 83
-        width: 1398
-        height: 729
+        x: 289
+        y: 66
+        width: 1470
+        height: 727
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -163,8 +163,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 66c409c32e69fc445aedde714a6d65b4
-      internalID: 1032709761
+      spriteID: 52d8a6cffd3a8f148a9ed6b2b204d8f1
+      internalID: -1069471843
       vertices: []
       indices: 
       edges: []
@@ -180,7 +180,7 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     nameFileIdTable:
-      Dirt_0: 1032709761
+      Dirt_0: -1069471843
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

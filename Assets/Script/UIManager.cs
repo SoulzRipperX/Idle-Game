@@ -9,12 +9,15 @@ public class UIManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI autoText;
     [SerializeField] private TextMeshProUGUI plotText;
     [SerializeField] private TextMeshProUGUI saveStatusText;
+    [SerializeField] private TextMeshProUGUI saveSlotText;
     [SerializeField] private Toggle autoToggle;
 
     private float saveMessageTimer;
 
     private void OnEnable()
     {
+        EnsureAutoToggleReference();
+
         GameManager.OnMoneyChanged += UpdateMoney;
         GameManager.OnIncomeChanged += UpdateIncome;
         GameManager.OnAutoStateChanged += UpdateAuto;
@@ -64,10 +67,45 @@ public class UIManager : MonoBehaviour
             GameManager.Instance.ManualLoad();
     }
 
+    public void OnTapDeleteSave()
+    {
+        if (GameManager.Instance == null)
+            return;
+
+        GameManager.Instance.DeleteActiveSaveSlot();
+        RefreshSaveSlotLabel();
+    }
+
+    public void OnTapOpenSaveFolder()
+    {
+        if (GameManager.Instance == null)
+            return;
+
+        GameManager.Instance.OpenSaveFolder();
+        ShowSaveMessage("Open: " + GameManager.Instance.GetSaveFolderPath());
+    }
+
+    public void OnTapNextSaveSlot()
+    {
+        if (GameManager.Instance == null)
+            return;
+
+        int next = GameManager.Instance.GetActiveSaveSlot() + 1;
+        if (next > GameManager.Instance.GetSaveSlotCount())
+            next = 1;
+
+        GameManager.Instance.SetActiveSaveSlot(next);
+        RefreshSaveSlotLabel();
+    }
+
+    public void OnTapSaveSlot1() => SetSaveSlot(1);
+    public void OnTapSaveSlot2() => SetSaveSlot(2);
+    public void OnTapSaveSlot3() => SetSaveSlot(3);
+
     public void OnTapAuto()
     {
         if (GameManager.Instance != null)
-            GameManager.Instance.ToggleAuto();
+            GameManager.Instance.SetAutoEnabled(!GameManager.Instance.AutoEnabled);
     }
 
     public void OnAutoToggleChanged(bool isOn)
@@ -75,8 +113,11 @@ public class UIManager : MonoBehaviour
         if (GameManager.Instance == null)
             return;
 
-        if (GameManager.Instance.AutoEnabled != isOn)
-            GameManager.Instance.ToggleAuto();
+        GameManager.Instance.SetAutoEnabled(isOn);
+
+        EnsureAutoToggleReference();
+        if (autoToggle != null)
+            autoToggle.SetIsOnWithoutNotify(GameManager.Instance.AutoEnabled);
     }
 
     public void OnTapSell()
@@ -108,6 +149,7 @@ public class UIManager : MonoBehaviour
         if (autoText == null) return;
         autoText.text = state ? "AUTO: ON" : "AUTO: OFF";
 
+        EnsureAutoToggleReference();
         if (autoToggle != null)
             autoToggle.SetIsOnWithoutNotify(state);
     }
@@ -117,6 +159,7 @@ public class UIManager : MonoBehaviour
         if (GameManager.Instance == null || plotText == null) return;
 
         plotText.text = $"Plots: {GameManager.Instance.GetUnlockedPlotCount()}/{GameManager.Instance.GetMaxPlotCount()}  Ripe: {GameManager.Instance.GetRipePlotCount()}";
+        RefreshSaveSlotLabel();
     }
 
     private void ShowSaveMessage(string message)
@@ -125,6 +168,38 @@ public class UIManager : MonoBehaviour
 
         saveStatusText.text = message;
         saveMessageTimer = 1.5f;
+    }
+
+    private void SetSaveSlot(int slot)
+    {
+        if (GameManager.Instance == null)
+            return;
+
+        GameManager.Instance.SetActiveSaveSlot(slot);
+        RefreshSaveSlotLabel();
+    }
+
+    private void RefreshSaveSlotLabel()
+    {
+        if (saveSlotText == null || GameManager.Instance == null)
+            return;
+
+        int slot = GameManager.Instance.GetActiveSaveSlot();
+        bool hasData = GameManager.Instance.HasSaveInSlot(slot);
+        saveSlotText.text = $"Save Slot: {slot} {(hasData ? "(USED)" : "(EMPTY)")}";
+    }
+
+    private void EnsureAutoToggleReference()
+    {
+        if (autoToggle != null)
+            return;
+
+        if (autoText != null)
+        {
+            autoToggle = autoText.GetComponent<Toggle>();
+            if (autoToggle == null)
+                autoToggle = autoText.GetComponentInParent<Toggle>();
+        }
     }
 
     private string Format(double num)

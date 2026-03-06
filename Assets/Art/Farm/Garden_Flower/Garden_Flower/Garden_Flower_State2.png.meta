@@ -152,10 +152,10 @@ TextureImporter:
       name: Garden_Flower_State2_0
       rect:
         serializedVersion: 2
-        x: 325
-        y: 83
-        width: 1398
-        height: 729
+        x: 289
+        y: 66
+        width: 1470
+        height: 730
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -163,8 +163,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 0de4970a28e4748489ef6e69ec8e99e8
-      internalID: 377619204
+      spriteID: ada62e265fd215a469a9effa59667496
+      internalID: 316174300
       vertices: []
       indices: 
       edges: []
@@ -180,7 +180,7 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     nameFileIdTable:
-      Garden_Flower_State2_0: 377619204
+      Garden_Flower_State2_0: 316174300
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

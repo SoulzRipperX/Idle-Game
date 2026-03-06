@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
+using System.Diagnostics;
 using UnityEngine;
 
 public class GameManager : MonoBehaviour
@@ -65,11 +67,15 @@ public class GameManager : MonoBehaviour
 
     private readonly Dictionary<UpgradeType, int> upgradeLevels = new Dictionary<UpgradeType, int>();
 
-    private const string SaveKey = "FarmIdleSave_v1";
+    private const string SaveKeyPrefix = "FarmIdleSave_v1_slot_";
+    private const string ActiveSlotKey = "FarmIdleSave_ActiveSlot";
+    private const int SlotCount = 3;
+    private const string SaveFolderName = "Saves";
     private float autoTimer;
     private float autoSellTimer;
     private float saveTimer;
     private bool hasPendingSave;
+    private int activeSaveSlot = 1;
 
     private void Awake()
     {
@@ -82,6 +88,7 @@ public class GameManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
+        activeSaveSlot = Mathf.Clamp(PlayerPrefs.GetInt(ActiveSlotKey, 1), 1, SlotCount);
         EnsureUpgradeDictionary();
     }
 
@@ -133,7 +140,15 @@ public class GameManager : MonoBehaviour
 
     public void ToggleAuto()
     {
-        AutoEnabled = !AutoEnabled;
+        SetAutoEnabled(!AutoEnabled);
+    }
+
+    public void SetAutoEnabled(bool enabled)
+    {
+        if (AutoEnabled == enabled)
+            return;
+
+        AutoEnabled = enabled;
         hasPendingSave = true;
         RecalculateIncome();
         OnAutoStateChanged?.Invoke(AutoEnabled);
@@ -143,6 +158,20 @@ public class GameManager : MonoBehaviour
     public double WaterByClick()
     {
         return ApplyWaterToActivePlots((float)(GetManualGrowthPerClick() * GetGrowthSpeedMultiplier()));
+    }
+
+    public bool WaterPlotByClick(PlantPlot targetPlot)
+    {
+        if (targetPlot == null)
+            return false;
+
+        if (!IsPlotWaterable(targetPlot))
+            return false;
+
+        float amount = (float)(GetManualGrowthPerClick() * GetGrowthSpeedMultiplier());
+        bool becameRipe = targetPlot.AddGrowth(amount);
+        OnGameStateChanged?.Invoke();
+        return becameRipe;
     }
 
     public double SellAllRipe()
@@ -326,7 +355,7 @@ public class GameManager : MonoBehaviour
     public void ManualSave()
     {
         SaveGame();
-        OnSaveMessage?.Invoke("Saved");
+        OnSaveMessage?.Invoke($"Saved (Slot {activeSaveSlot})");
     }
 
     public void ManualLoad()
@@ -335,7 +364,87 @@ public class GameManager : MonoBehaviour
         autoTimer = 0f;
         autoSellTimer = 0f;
         RefreshAll();
-        OnSaveMessage?.Invoke("Loaded");
+        OnSaveMessage?.Invoke($"Loaded (Slot {activeSaveSlot})");
+    }
+
+    public int GetActiveSaveSlot()
+    {
+        return activeSaveSlot;
+    }
+
+    public int GetSaveSlotCount()
+    {
+        return SlotCount;
+    }
+
+    public string GetSaveFolderPath()
+    {
+        return GetSaveDirectoryPath();
+    }
+
+    public bool HasSaveInSlot(int slot)
+    {
+        int safeSlot = Mathf.Clamp(slot, 1, SlotCount);
+        return File.Exists(GetSaveFilePath(safeSlot));
+    }
+
+    public void SetActiveSaveSlot(int slot)
+    {
+        int safeSlot = Mathf.Clamp(slot, 1, SlotCount);
+        if (safeSlot == activeSaveSlot)
+            return;
+
+        activeSaveSlot = safeSlot;
+        PlayerPrefs.SetInt(ActiveSlotKey, activeSaveSlot);
+        PlayerPrefs.Save();
+        OnGameStateChanged?.Invoke();
+        OnSaveMessage?.Invoke($"Active Slot: {activeSaveSlot}");
+    }
+
+    public void OpenSaveFolder()
+    {
+        string folder = GetSaveDirectoryPath();
+        if (!Directory.Exists(folder))
+            Directory.CreateDirectory(folder);
+
+        try
+        {
+#if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
+            Process.Start("explorer.exe", folder.Replace("/", "\\"));
+#elif UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
+            Process.Start("open", "\"" + folder + "\"");
+#elif UNITY_STANDALONE_LINUX || UNITY_EDITOR_LINUX
+            Process.Start("xdg-open", "\"" + folder + "\"");
+#else
+            Application.OpenURL("file://" + folder);
+#endif
+        }
+        catch (Exception e)
+        {
+            UnityEngine.Debug.LogWarning("Cannot open save folder: " + e.Message);
+        }
+    }
+
+    public void DeleteActiveSaveSlot()
+    {
+        string filePath = GetSaveFilePath(activeSaveSlot);
+        if (!File.Exists(filePath))
+        {
+            OnSaveMessage?.Invoke($"Slot {activeSaveSlot} is empty");
+            return;
+        }
+
+        File.Delete(filePath);
+
+        Money = 0d;
+        AutoEnabled = false;
+        autoTimer = 0f;
+        autoSellTimer = 0f;
+        hasPendingSave = false;
+        EnsureUpgradeDictionary();
+        RefreshAll();
+
+        OnSaveMessage?.Invoke($"Deleted Slot {activeSaveSlot}");
     }
 
     private double ApplyWaterToActivePlots(float growthAmount)
@@ -356,6 +465,22 @@ public class GameManager : MonoBehaviour
 
         OnGameStateChanged?.Invoke();
         return becameRipeCount;
+    }
+
+    private bool IsPlotWaterable(PlantPlot plot)
+    {
+        int activePlots = GetUnlockedPlotCount();
+
+        for (int i = 0; i < plots.Length; i++)
+        {
+            if (plots[i] == null || i >= activePlots)
+                continue;
+
+            if (ReferenceEquals(plots[i], plot))
+                return true;
+        }
+
+        return false;
     }
 
     private double GetManualGrowthPerClick()
@@ -492,8 +617,12 @@ public class GameManager : MonoBehaviour
             data.plotProgress.Add(plots[i] != null ? plots[i].GrowthProgress : 0f);
         }
 
-        PlayerPrefs.SetString(SaveKey, JsonUtility.ToJson(data));
-        PlayerPrefs.Save();
+        string folder = GetSaveDirectoryPath();
+        if (!Directory.Exists(folder))
+            Directory.CreateDirectory(folder);
+
+        string json = JsonUtility.ToJson(data, true);
+        File.WriteAllText(GetSaveFilePath(activeSaveSlot), json);
         hasPendingSave = false;
     }
 
@@ -501,14 +630,16 @@ public class GameManager : MonoBehaviour
     {
         EnsureUpgradeDictionary();
 
-        if (!PlayerPrefs.HasKey(SaveKey))
+        string filePath = GetSaveFilePath(activeSaveSlot);
+        if (!File.Exists(filePath))
         {
             Money = 0d;
             AutoEnabled = false;
             return;
         }
 
-        SaveData data = JsonUtility.FromJson<SaveData>(PlayerPrefs.GetString(SaveKey));
+        string json = File.ReadAllText(filePath);
+        SaveData data = JsonUtility.FromJson<SaveData>(json);
         if (data == null)
             return;
 
@@ -570,5 +701,20 @@ public class GameManager : MonoBehaviour
     {
         if (hasPendingSave)
             SaveGame();
+    }
+
+    private static string GetSaveKey(int slot)
+    {
+        return SaveKeyPrefix + slot;
+    }
+
+    private static string GetSaveDirectoryPath()
+    {
+        return Path.Combine(Application.persistentDataPath, SaveFolderName);
+    }
+
+    private static string GetSaveFilePath(int slot)
+    {
+        return Path.Combine(GetSaveDirectoryPath(), GetSaveKey(slot) + ".json");
     }
 }
