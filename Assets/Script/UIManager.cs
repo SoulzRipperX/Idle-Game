@@ -6,19 +6,29 @@ public class UIManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI moneyText;
     [SerializeField] private TextMeshProUGUI incomeText;
     [SerializeField] private TextMeshProUGUI autoText;
+    [SerializeField] private TextMeshProUGUI plotText;
+    [SerializeField] private TextMeshProUGUI saveStatusText;
+
+    private float saveMessageTimer;
 
     private void OnEnable()
     {
         GameManager.OnMoneyChanged += UpdateMoney;
         GameManager.OnIncomeChanged += UpdateIncome;
         GameManager.OnAutoStateChanged += UpdateAuto;
+        GameManager.OnGameStateChanged += RefreshStats;
+        GameManager.OnSaveMessage += ShowSaveMessage;
 
         if (GameManager.Instance != null)
         {
             UpdateMoney(GameManager.Instance.Money);
             UpdateIncome(GameManager.Instance.IncomePerSecond);
             UpdateAuto(GameManager.Instance.AutoEnabled);
+            RefreshStats();
         }
+
+        if (saveStatusText != null)
+            saveStatusText.text = string.Empty;
     }
 
     private void OnDisable()
@@ -26,28 +36,88 @@ public class UIManager : MonoBehaviour
         GameManager.OnMoneyChanged -= UpdateMoney;
         GameManager.OnIncomeChanged -= UpdateIncome;
         GameManager.OnAutoStateChanged -= UpdateAuto;
+        GameManager.OnGameStateChanged -= RefreshStats;
+        GameManager.OnSaveMessage -= ShowSaveMessage;
+    }
+
+    private void Update()
+    {
+        if (saveStatusText == null || string.IsNullOrEmpty(saveStatusText.text))
+            return;
+
+        saveMessageTimer -= Time.deltaTime;
+        if (saveMessageTimer <= 0f)
+            saveStatusText.text = string.Empty;
+    }
+
+    public void OnTapSave()
+    {
+        if (GameManager.Instance != null)
+            GameManager.Instance.ManualSave();
+    }
+
+    public void OnTapLoad()
+    {
+        if (GameManager.Instance != null)
+            GameManager.Instance.ManualLoad();
+    }
+
+    public void OnTapAuto()
+    {
+        if (GameManager.Instance != null)
+            GameManager.Instance.ToggleAuto();
+    }
+
+    public void OnTapSell()
+    {
+        if (GameManager.Instance == null)
+            return;
+
+        double earned = GameManager.Instance.SellAllRipe();
+        if (earned > 0d)
+            ShowSaveMessage("Sold +" + GameManager.Instance.FormatMoney(earned));
+        else
+            ShowSaveMessage("No ripe plant");
     }
 
     private void UpdateMoney(double value)
     {
-        if (moneyText != null)
-            moneyText.text = Format(value);
+        if (moneyText == null) return;
+        moneyText.text = "Coins: " + Format(value);
     }
 
     private void UpdateIncome(double value)
     {
-        if (incomeText != null)
-            incomeText.text = Format(value) + " /s";
+        if (incomeText == null) return;
+        incomeText.text = "Auto Sell: " + Format(value) + " /s";
     }
 
     private void UpdateAuto(bool state)
     {
-        if (autoText != null)
-            autoText.text = state ? "AUTO: ON" : "AUTO: OFF";
+        if (autoText == null) return;
+        autoText.text = state ? "AUTO: ON" : "AUTO: OFF";
+    }
+
+    private void RefreshStats()
+    {
+        if (GameManager.Instance == null || plotText == null) return;
+
+        plotText.text = $"Plots: {GameManager.Instance.GetUnlockedPlotCount()}/{GameManager.Instance.GetMaxPlotCount()}  Ripe: {GameManager.Instance.GetRipePlotCount()}";
+    }
+
+    private void ShowSaveMessage(string message)
+    {
+        if (saveStatusText == null) return;
+
+        saveStatusText.text = message;
+        saveMessageTimer = 1.5f;
     }
 
     private string Format(double num)
     {
+        if (GameManager.Instance != null)
+            return GameManager.Instance.FormatMoney(num);
+
         if (num >= 1_000_000_000d)
             return (num / 1_000_000_000d).ToString("F1") + "B";
         if (num >= 1_000_000d)

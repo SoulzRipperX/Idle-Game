@@ -5,41 +5,28 @@ using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
-    // Singleton Pattern
     public static GameManager Instance { get; private set; }
 
-    // Observer Pattern
     public static event Action<double> OnMoneyChanged;
     public static event Action<double> OnIncomeChanged;
     public static event Action<bool> OnAutoStateChanged;
+    public static event Action OnGameStateChanged;
+    public static event Action<string> OnSaveMessage;
 
-    [Header("Idle Settings")]
-    [SerializeField] private float updatesPerSecond = 5f;
-    [SerializeField] private StoreUpgrade[] storeUpgrades;
-
-    [Header("Auto Settings")]
-    [SerializeField] private double autoClickPower = 1;
-    [SerializeField] private float autoInterval = 1f;
-
-    [Header("Save Settings")]
-    [SerializeField] private float autoSaveInterval = 10f;
-
-    public double Money { get; private set; }
-    public double IncomePerSecond { get; private set; }
-    public bool AutoEnabled { get; private set; }
-    private double potentialIncomePerSecond;
-
-    private const string SaveKey = "GameSaveData_v2";
-
-    private float idleTimer;
-    private float autoTimer;
-    private float saveTimer;
-    private bool hasPendingSave;
+    [Serializable]
+    private class UpgradeBalance
+    {
+        public UpgradeType type;
+        public string displayName;
+        public double basePrice = 10;
+        public double priceMultiplier = 1.4;
+        public int maxLevel = 20;
+    }
 
     [Serializable]
     private class UpgradeSave
     {
-        public string id;
+        public string type;
         public int level;
     }
 
@@ -48,9 +35,40 @@ public class GameManager : MonoBehaviour
     {
         public string money;
         public int autoEnabled;
-        public string autoPower;
         public List<UpgradeSave> upgrades = new List<UpgradeSave>();
+        public List<float> plotProgress = new List<float>();
     }
+
+    [Header("Core")]
+    [SerializeField] private PlantPlot[] plots;
+
+    [Header("Economy")]
+    [SerializeField] private double baseCoinReward = 1d;
+    [SerializeField] private double coinBonusPerLevel = 0.1d;
+    [SerializeField] private double clickBonusPerLevel = 0.25d;
+    [SerializeField] private double growthSpeedBonusPerLevel = 0.15d;
+
+    [Header("Auto")]
+    [SerializeField] private float autoInterval = 1.8f;
+    [SerializeField] private float autoGrowthMultiplier = 0.4f;
+
+    [Header("Save")]
+    [SerializeField] private float autoSaveInterval = 10f;
+
+    [Header("Upgrade Config")]
+    [SerializeField] private UpgradeBalance[] upgradeBalances;
+
+    public double Money { get; private set; }
+    public bool AutoEnabled { get; private set; }
+    public double IncomePerSecond { get; private set; }
+
+    private readonly Dictionary<UpgradeType, int> upgradeLevels = new Dictionary<UpgradeType, int>();
+
+    private const string SaveKey = "FarmIdleSave_v1";
+    private float autoTimer;
+    private float autoSellTimer;
+    private float saveTimer;
+    private bool hasPendingSave;
 
     private void Awake()
     {
@@ -62,36 +80,45 @@ public class GameManager : MonoBehaviour
 
         Instance = this;
         DontDestroyOnLoad(gameObject);
+
+        EnsureUpgradeDictionary();
     }
 
     private void Start()
     {
         LoadGame();
-        NotifyObservers();
+        RefreshAll();
     }
 
     private void Update()
     {
         float delta = Time.deltaTime;
-        float idleStep = 1f / Mathf.Max(0.01f, updatesPerSecond);
-
-        idleTimer += delta;
         autoTimer += delta;
         saveTimer += delta;
 
-        while (idleTimer >= idleStep)
-        {
-            ProcessIdleTick(idleStep);
-            idleTimer -= idleStep;
-        }
-
         if (AutoEnabled)
         {
-            float safeInterval = Mathf.Max(0.05f, autoInterval);
+            float safeInterval = Mathf.Max(0.3f, autoInterval);
             while (autoTimer >= safeInterval)
             {
-                AddMoney(autoClickPower);
+                ApplyWaterToActivePlots(GetAutoGrowthPerTick());
                 autoTimer -= safeInterval;
+            }
+
+            if (GetUpgradeLevel(UpgradeType.AutoSell) > 0)
+            {
+                float sellInterval = GetAutoSellInterval();
+                autoSellTimer += delta;
+
+                while (autoSellTimer >= sellInterval)
+                {
+                    SellAllRipeInternal();
+                    autoSellTimer -= sellInterval;
+                }
+            }
+            else
+            {
+                autoSellTimer = 0f;
             }
         }
 
@@ -99,30 +126,8 @@ public class GameManager : MonoBehaviour
         {
             saveTimer = 0f;
             if (hasPendingSave)
-            {
                 SaveGame();
-            }
         }
-    }
-
-    public void AddMoney(double amount)
-    {
-        if (amount <= 0d) return;
-
-        Money += amount;
-        hasPendingSave = true;
-        OnMoneyChanged?.Invoke(Money);
-    }
-
-    public bool SpendMoney(double amount)
-    {
-        if (amount <= 0d || Money < amount)
-            return false;
-
-        Money -= amount;
-        hasPendingSave = true;
-        OnMoneyChanged?.Invoke(Money);
-        return true;
     }
 
     public void ToggleAuto()
@@ -131,62 +136,178 @@ public class GameManager : MonoBehaviour
         hasPendingSave = true;
         RecalculateIncome();
         OnAutoStateChanged?.Invoke(AutoEnabled);
-        SaveGame();
+        OnGameStateChanged?.Invoke();
     }
 
-    public void UpgradeAuto(double amount)
+    public double WaterByClick()
     {
-        if (amount <= 0d) return;
+        return ApplyWaterToActivePlots((float)(GetManualGrowthPerClick() * GetGrowthSpeedMultiplier()));
+    }
 
-        autoClickPower += amount;
+    public double SellAllRipe()
+    {
+        return SellAllRipeInternal();
+    }
+
+    private double SellAllRipeInternal()
+    {
+        int ripeCount = 0;
+        int activePlots = GetUnlockedPlotCount();
+
+        for (int i = 0; i < plots.Length; i++)
+        {
+            if (plots[i] == null || i >= activePlots)
+                continue;
+
+            if (plots[i].HarvestAndReset())
+                ripeCount++;
+        }
+
+        if (ripeCount <= 0)
+        {
+            OnGameStateChanged?.Invoke();
+            return 0d;
+        }
+
+        double earned = ripeCount * GetCoinRewardPerHarvest();
+        AddMoney(earned);
+        OnGameStateChanged?.Invoke();
+        return earned;
+    }
+
+    public bool PurchaseUpgrade(UpgradeType type)
+    {
+        int level = GetUpgradeLevel(type);
+        int maxLevel = GetUpgradeMaxLevel(type);
+
+        if (level >= maxLevel)
+            return false;
+
+        double price = GetUpgradePrice(type);
+        if (!SpendMoney(price))
+            return false;
+
+        upgradeLevels[type] = level + 1;
+
+        if (type == UpgradeType.PlotUnlock)
+            ApplyPlotUnlocks();
+
         hasPendingSave = true;
-    }
-
-    public void HandleUpgradeStateChanged()
-    {
         RecalculateIncome();
-        hasPendingSave = true;
-        NotifyObservers();
+        OnGameStateChanged?.Invoke();
+        return true;
     }
 
-    public void SaveGame()
+    public int GetUpgradeLevel(UpgradeType type)
     {
-        SaveData data = new SaveData
-        {
-            money = Money.ToString("R", CultureInfo.InvariantCulture),
-            autoEnabled = AutoEnabled ? 1 : 0,
-            autoPower = autoClickPower.ToString("R", CultureInfo.InvariantCulture)
-        };
-
-        foreach (var upgrade in storeUpgrades)
-        {
-            if (upgrade == null) continue;
-            data.upgrades.Add(new UpgradeSave
-            {
-                id = upgrade.UpgradeId,
-                level = upgrade.Level
-            });
-        }
-
-        string json = JsonUtility.ToJson(data);
-        PlayerPrefs.SetString(SaveKey, json);
-        PlayerPrefs.Save();
-        hasPendingSave = false;
+        return upgradeLevels.TryGetValue(type, out int level) ? level : 0;
     }
 
-    public void LoadGame()
+    public int GetUpgradeMaxLevel(UpgradeType type)
     {
-        if (PlayerPrefs.HasKey(SaveKey))
+        UpgradeBalance cfg = GetUpgradeConfig(type);
+        if (cfg != null)
         {
-            ApplySaveData(JsonUtility.FromJson<SaveData>(PlayerPrefs.GetString(SaveKey)));
-        }
-        else
-        {
-            LoadLegacySave();
+            int configuredMax = Mathf.Max(1, cfg.maxLevel);
+            if (type == UpgradeType.PlotUnlock)
+                return Mathf.Min(configuredMax, Mathf.Max(0, plots.Length - 1));
+
+            return configuredMax;
         }
 
-        RecalculateIncome();
-        hasPendingSave = false;
+        if (type == UpgradeType.PlotUnlock)
+            return Mathf.Max(0, plots.Length - 1);
+        if (type == UpgradeType.AutoSell)
+            return 10;
+
+        return 20;
+    }
+
+    public bool IsUpgradeMaxed(UpgradeType type)
+    {
+        return GetUpgradeLevel(type) >= GetUpgradeMaxLevel(type);
+    }
+
+    public double GetUpgradePrice(UpgradeType type)
+    {
+        UpgradeBalance cfg = GetUpgradeConfig(type);
+        int level = GetUpgradeLevel(type);
+        if (cfg != null)
+            return cfg.basePrice * Math.Pow(cfg.priceMultiplier, level);
+
+        switch (type)
+        {
+            case UpgradeType.CoinValue:
+                return 20d * Math.Pow(1.35d, level);
+            case UpgradeType.ClickPower:
+                return 15d * Math.Pow(1.30d, level);
+            case UpgradeType.GrowthSpeed:
+                return 30d * Math.Pow(1.40d, level);
+            case UpgradeType.PlotUnlock:
+                return 120d * Math.Pow(2.20d, level);
+            case UpgradeType.AutoSell:
+                return 75d * Math.Pow(1.55d, level);
+            default:
+                return 999999d;
+        }
+    }
+
+    public string GetUpgradeName(UpgradeType type)
+    {
+        UpgradeBalance cfg = GetUpgradeConfig(type);
+        if (cfg != null && !string.IsNullOrWhiteSpace(cfg.displayName))
+            return cfg.displayName;
+
+        switch (type)
+        {
+            case UpgradeType.CoinValue: return "Coin Value";
+            case UpgradeType.ClickPower: return "Click Power";
+            case UpgradeType.GrowthSpeed: return "Growth Speed";
+            case UpgradeType.PlotUnlock: return "Unlock Plot";
+            case UpgradeType.AutoSell: return "Auto Sell";
+            default: return type.ToString();
+        }
+    }
+
+    public int GetUnlockedPlotCount()
+    {
+        return Mathf.Clamp(1 + GetUpgradeLevel(UpgradeType.PlotUnlock), 1, Mathf.Max(1, plots.Length));
+    }
+
+    public int GetMaxPlotCount()
+    {
+        return Mathf.Max(1, plots.Length);
+    }
+
+    public int GetRipePlotCount()
+    {
+        int ripe = 0;
+        int activePlots = GetUnlockedPlotCount();
+
+        for (int i = 0; i < plots.Length; i++)
+        {
+            if (plots[i] == null || i >= activePlots)
+                continue;
+
+            if (plots[i].IsRipe)
+                ripe++;
+        }
+
+        return ripe;
+    }
+
+    public double GetCoinRewardPerHarvest()
+    {
+        return baseCoinReward * (1d + coinBonusPerLevel * GetUpgradeLevel(UpgradeType.CoinValue));
+    }
+
+    public float GetAutoSellInterval()
+    {
+        int level = GetUpgradeLevel(UpgradeType.AutoSell);
+        if (level <= 0)
+            return 999f;
+
+        return Mathf.Max(0.35f, 2.2f - (0.2f * level));
     }
 
     public string FormatMoney(double value)
@@ -201,114 +322,246 @@ public class GameManager : MonoBehaviour
         return value.ToString("F1");
     }
 
-    private void ProcessIdleTick(float tickDuration)
+    public void ManualSave()
     {
-        RecalculateIncome();
-
-        if (IncomePerSecond <= 0d) return;
-
-        Money += IncomePerSecond * tickDuration;
-        hasPendingSave = true;
-        OnMoneyChanged?.Invoke(Money);
+        SaveGame();
+        OnSaveMessage?.Invoke("Saved");
     }
 
-    private void LoadLegacySave()
+    public void ManualLoad()
     {
-        if (PlayerPrefs.HasKey("Money"))
-            Money = ParseDouble(PlayerPrefs.GetString("Money"), 0d);
+        LoadGame();
+        autoTimer = 0f;
+        autoSellTimer = 0f;
+        RefreshAll();
+        OnSaveMessage?.Invoke("Loaded");
+    }
 
-        AutoEnabled = PlayerPrefs.GetInt("AutoEnabled", 0) == 1;
+    private double ApplyWaterToActivePlots(float growthAmount)
+    {
+        if (growthAmount <= 0f) return 0d;
 
-        if (PlayerPrefs.HasKey("AutoPower"))
-            autoClickPower = ParseDouble(PlayerPrefs.GetString("AutoPower"), autoClickPower);
+        int becameRipeCount = 0;
+        int activePlots = GetUnlockedPlotCount();
 
-        foreach (var upgrade in storeUpgrades)
+        for (int i = 0; i < plots.Length; i++)
         {
-            if (upgrade == null) continue;
-            int level = PlayerPrefs.GetInt("Upgrade_" + upgrade.upgradeName, 0);
-            upgrade.SetLevel(level);
+            if (plots[i] == null || i >= activePlots)
+                continue;
+
+            if (plots[i].AddGrowth(growthAmount))
+                becameRipeCount++;
+        }
+
+        OnGameStateChanged?.Invoke();
+        return becameRipeCount;
+    }
+
+    private double GetManualGrowthPerClick()
+    {
+        return 1d + clickBonusPerLevel * GetUpgradeLevel(UpgradeType.ClickPower);
+    }
+
+    private float GetGrowthSpeedMultiplier()
+    {
+        return (float)(1d + growthSpeedBonusPerLevel * GetUpgradeLevel(UpgradeType.GrowthSpeed));
+    }
+
+    private float GetAutoGrowthPerTick()
+    {
+        return (float)(GetManualGrowthPerClick() * autoGrowthMultiplier * GetGrowthSpeedMultiplier());
+    }
+
+    private void AddMoney(double amount)
+    {
+        if (amount <= 0d) return;
+        Money += amount;
+        hasPendingSave = true;
+        OnMoneyChanged?.Invoke(Money);
+        RecalculateIncome();
+    }
+
+    private bool SpendMoney(double amount)
+    {
+        if (amount <= 0d || Money < amount)
+            return false;
+
+        Money -= amount;
+        hasPendingSave = true;
+        OnMoneyChanged?.Invoke(Money);
+        return true;
+    }
+
+    private void ApplyPlotUnlocks()
+    {
+        int unlocked = GetUnlockedPlotCount();
+
+        for (int i = 0; i < plots.Length; i++)
+        {
+            if (plots[i] == null) continue;
+            plots[i].SetUnlocked(i < unlocked);
         }
     }
 
-    private void ApplySaveData(SaveData data)
+    private void RecalculateIncome()
     {
-        if (data == null)
+        if (!AutoEnabled)
         {
-            LoadLegacySave();
+            IncomePerSecond = 0d;
+            OnIncomeChanged?.Invoke(IncomePerSecond);
             return;
         }
 
-        Money = ParseDouble(data.money, 0d);
-        AutoEnabled = data.autoEnabled == 1;
-        autoClickPower = ParseDouble(data.autoPower, autoClickPower);
-
-        foreach (var upgrade in storeUpgrades)
+        int activePlots = GetUnlockedPlotCount();
+        if (activePlots <= 0)
         {
-            if (upgrade == null) continue;
-            upgrade.SetLevel(0);
+            IncomePerSecond = 0d;
+            OnIncomeChanged?.Invoke(IncomePerSecond);
+            return;
         }
 
-        if (data.upgrades == null) return;
-
-        foreach (var saved in data.upgrades)
+        if (GetUpgradeLevel(UpgradeType.AutoSell) <= 0)
         {
-            if (saved == null || string.IsNullOrWhiteSpace(saved.id)) continue;
-            StoreUpgrade upgrade = FindUpgrade(saved.id);
-            if (upgrade != null)
-                upgrade.SetLevel(saved.level);
+            IncomePerSecond = 0d;
+            OnIncomeChanged?.Invoke(IncomePerSecond);
+            return;
         }
+
+        double growthPerSecondPerPlot = GetAutoGrowthPerTick() / Mathf.Max(0.3f, autoInterval);
+        double harvestPerSecondPerPlot = growthPerSecondPerPlot / 3d;
+        IncomePerSecond = activePlots * harvestPerSecondPerPlot * GetCoinRewardPerHarvest();
+        OnIncomeChanged?.Invoke(IncomePerSecond);
     }
 
-    private StoreUpgrade FindUpgrade(string id)
+    private UpgradeBalance GetUpgradeConfig(UpgradeType type)
     {
-        foreach (var upgrade in storeUpgrades)
+        foreach (UpgradeBalance cfg in upgradeBalances)
         {
-            if (upgrade == null) continue;
-            if (string.Equals(upgrade.UpgradeId, id, StringComparison.Ordinal))
-                return upgrade;
+            if (cfg != null && cfg.type == type)
+                return cfg;
         }
 
         return null;
     }
 
-    private void RecalculateIncome()
+    private void EnsureUpgradeDictionary()
     {
-        double sum = 0d;
-
-        foreach (var upgrade in storeUpgrades)
+        foreach (UpgradeType type in Enum.GetValues(typeof(UpgradeType)))
         {
-            if (upgrade == null) continue;
-            sum += upgrade.CalculateIncomePerSecond();
+            if (!upgradeLevels.ContainsKey(type))
+                upgradeLevels[type] = 0;
         }
 
-        potentialIncomePerSecond = sum;
-        IncomePerSecond = AutoEnabled ? potentialIncomePerSecond : 0d;
-        OnIncomeChanged?.Invoke(IncomePerSecond);
+        for (int i = 0; i < plots.Length; i++)
+        {
+            if (plots[i] == null) continue;
+            plots[i].SetUnlocked(i == 0);
+            plots[i].SetGrowthProgress(0f);
+        }
     }
 
-    private void NotifyObservers()
+    private void RefreshAll()
     {
+        ApplyPlotUnlocks();
+        RecalculateIncome();
         OnMoneyChanged?.Invoke(Money);
-        OnIncomeChanged?.Invoke(IncomePerSecond);
         OnAutoStateChanged?.Invoke(AutoEnabled);
+        OnGameStateChanged?.Invoke();
+    }
+
+    private void SaveGame()
+    {
+        SaveData data = new SaveData
+        {
+            money = Money.ToString("R", CultureInfo.InvariantCulture),
+            autoEnabled = AutoEnabled ? 1 : 0
+        };
+
+        foreach (KeyValuePair<UpgradeType, int> pair in upgradeLevels)
+        {
+            data.upgrades.Add(new UpgradeSave
+            {
+                type = pair.Key.ToString(),
+                level = pair.Value
+            });
+        }
+
+        for (int i = 0; i < plots.Length; i++)
+        {
+            data.plotProgress.Add(plots[i] != null ? plots[i].GrowthProgress : 0f);
+        }
+
+        PlayerPrefs.SetString(SaveKey, JsonUtility.ToJson(data));
+        PlayerPrefs.Save();
+        hasPendingSave = false;
+    }
+
+    private void LoadGame()
+    {
+        EnsureUpgradeDictionary();
+
+        if (!PlayerPrefs.HasKey(SaveKey))
+        {
+            Money = 0d;
+            AutoEnabled = false;
+            return;
+        }
+
+        SaveData data = JsonUtility.FromJson<SaveData>(PlayerPrefs.GetString(SaveKey));
+        if (data == null)
+            return;
+
+        Money = ParseDouble(data.money, 0d);
+        AutoEnabled = data.autoEnabled == 1;
+
+        foreach (UpgradeType type in Enum.GetValues(typeof(UpgradeType)))
+            upgradeLevels[type] = 0;
+
+        if (data.upgrades != null)
+        {
+            foreach (UpgradeSave item in data.upgrades)
+            {
+                if (item == null || string.IsNullOrWhiteSpace(item.type))
+                    continue;
+
+                if (Enum.TryParse(item.type, out UpgradeType type))
+                {
+                    int max = GetUpgradeMaxLevel(type);
+                    upgradeLevels[type] = Mathf.Clamp(item.level, 0, max);
+                }
+            }
+        }
+
+        ApplyPlotUnlocks();
+
+        if (data.plotProgress != null)
+        {
+            for (int i = 0; i < plots.Length && i < data.plotProgress.Count; i++)
+            {
+                if (plots[i] == null) continue;
+                plots[i].SetGrowthProgress(data.plotProgress[i]);
+            }
+        }
+
+        hasPendingSave = false;
     }
 
     private static double ParseDouble(string value, double fallback)
     {
         if (string.IsNullOrWhiteSpace(value)) return fallback;
 
-        if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double result))
-            return result;
+        if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed))
+            return parsed;
 
-        if (double.TryParse(value, out result))
-            return result;
+        if (double.TryParse(value, out parsed))
+            return parsed;
 
         return fallback;
     }
 
-    private void OnApplicationPause(bool pauseStatus)
+    private void OnApplicationPause(bool pause)
     {
-        if (pauseStatus && hasPendingSave)
+        if (pause && hasPendingSave)
             SaveGame();
     }
 
