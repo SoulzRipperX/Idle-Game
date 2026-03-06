@@ -10,6 +10,7 @@ public class StoreUpgrade : MonoBehaviour
     [Header("UI")]
     [SerializeField] private TextMeshProUGUI labelText;
     [SerializeField] private Button button;
+    [SerializeField] private AudioClip upgradeSfx;
 
     private void OnEnable()
     {
@@ -30,7 +31,10 @@ public class StoreUpgrade : MonoBehaviour
         if (GameManager.Instance == null)
             return;
 
-        GameManager.Instance.PurchaseUpgrade(upgradeType);
+        bool success = GameManager.Instance.PurchaseUpgrade(upgradeType);
+        if (success && AudioManager.Instance != null)
+            AudioManager.Instance.PlayUpgrade(upgradeSfx);
+
         UpdateUI();
     }
 

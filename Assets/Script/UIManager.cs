@@ -11,6 +11,7 @@ public class UIManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI saveStatusText;
     [SerializeField] private TextMeshProUGUI saveSlotText;
     [SerializeField] private Toggle autoToggle;
+    [SerializeField] private AudioClip sellSfx;
 
     private float saveMessageTimer;
 
@@ -127,7 +128,12 @@ public class UIManager : MonoBehaviour
 
         double earned = GameManager.Instance.SellAllRipe();
         if (earned > 0d)
+        {
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.PlaySell(sellSfx);
+
             ShowSaveMessage("Sold +" + GameManager.Instance.FormatMoney(earned));
+        }
         else
             ShowSaveMessage("No ripe plant");
     }

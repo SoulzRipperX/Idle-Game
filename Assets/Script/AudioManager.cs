@@ -10,6 +10,8 @@ public class AudioManager : MonoBehaviour
 
     [Header("SFX")]
     [SerializeField] private AudioClip plotClickSfx;
+    [SerializeField] private AudioClip sellSfx;
+    [SerializeField] private AudioClip upgradeSfx;
 
     private const string MasterVolumeKey = "Volume";
     private const string BgmEnabledKey = "BGM_Enabled";
@@ -48,10 +50,19 @@ public class AudioManager : MonoBehaviour
     public void PlayPlotClick(AudioClip overrideClip = null, float volumeScale = 1f)
     {
         AudioClip clip = overrideClip != null ? overrideClip : plotClickSfx;
-        if (clip == null || sfxSource == null)
-            return;
+        PlaySfx(clip, volumeScale);
+    }
 
-        sfxSource.PlayOneShot(clip, Mathf.Clamp01(volumeScale));
+    public void PlaySell(AudioClip overrideClip = null, float volumeScale = 1f)
+    {
+        AudioClip clip = overrideClip != null ? overrideClip : sellSfx;
+        PlaySfx(clip, volumeScale);
+    }
+
+    public void PlayUpgrade(AudioClip overrideClip = null, float volumeScale = 1f)
+    {
+        AudioClip clip = overrideClip != null ? overrideClip : upgradeSfx;
+        PlaySfx(clip, volumeScale);
     }
 
     private void LoadSettings()
@@ -70,5 +81,13 @@ public class AudioManager : MonoBehaviour
             if (BgmEnabled && !bgmSource.isPlaying)
                 bgmSource.Play();
         }
+    }
+
+    private void PlaySfx(AudioClip clip, float volumeScale)
+    {
+        if (clip == null || sfxSource == null)
+            return;
+
+        sfxSource.PlayOneShot(clip, Mathf.Clamp01(volumeScale));
     }
 }

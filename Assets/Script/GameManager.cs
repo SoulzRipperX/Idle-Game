@@ -434,12 +434,31 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        File.Delete(filePath);
+        try
+        {
+            File.Delete(filePath);
+            if (File.Exists(filePath))
+            {
+                // Last-resort: clear attributes and retry delete.
+                File.SetAttributes(filePath, FileAttributes.Normal);
+                File.Delete(filePath);
+            }
+        }
+        catch (Exception e)
+        {
+            OnSaveMessage?.Invoke($"Delete failed: {e.Message}");
+            return;
+        }
+
+        // Cleanup legacy key if an old PlayerPrefs save exists.
+        PlayerPrefs.DeleteKey(GetSaveKey(activeSaveSlot));
+        PlayerPrefs.Save();
 
         Money = 0d;
         AutoEnabled = false;
         autoTimer = 0f;
         autoSellTimer = 0f;
+        saveTimer = 0f;
         hasPendingSave = false;
         EnsureUpgradeDictionary();
         RefreshAll();
