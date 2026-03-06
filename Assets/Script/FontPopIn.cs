@@ -6,18 +6,21 @@ public class FontPopIn : MonoBehaviour
     public float popDuration = 0.4f;
     public float loopScale = 1.1f;
     public float loopSpeed = 2f;
+    [SerializeField] private bool useFixedOriginalScale = true;
+    [SerializeField] private Vector3 fixedOriginalScale = Vector3.one;
 
     private Vector3 originalScale;
     private Coroutine loopRoutine;
 
     void Awake()
     {
-        originalScale = transform.localScale;
+        RefreshOriginalScale();
     }
 
     void OnEnable()
     {
         StopAllCoroutines();
+        RefreshOriginalScale();
         transform.localScale = Vector3.zero;
         StartCoroutine(PopIn());
     }
@@ -28,7 +31,7 @@ public class FontPopIn : MonoBehaviour
 
         while (time < popDuration)
         {
-            time += Time.deltaTime;
+            time += Time.unscaledDeltaTime;
             float t = time / popDuration;
 
             float scale = Mathf.LerpUnclamped(0, 1, EaseOutBack(t));
@@ -45,7 +48,7 @@ public class FontPopIn : MonoBehaviour
     {
         while (true)
         {
-            float scale = 1 + Mathf.Sin(Time.time * loopSpeed) * (loopScale - 1);
+            float scale = 1 + Mathf.Sin(Time.unscaledTime * loopSpeed) * (loopScale - 1);
             transform.localScale = originalScale * scale;
             yield return null;
         }
@@ -62,5 +65,10 @@ public class FontPopIn : MonoBehaviour
     {
         StopAllCoroutines();
         transform.localScale = originalScale;
+    }
+
+    private void RefreshOriginalScale()
+    {
+        originalScale = useFixedOriginalScale ? fixedOriginalScale : transform.localScale;
     }
 }
