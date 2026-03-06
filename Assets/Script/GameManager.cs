@@ -44,6 +44,7 @@ public class GameManager : MonoBehaviour
 
     [Header("Economy")]
     [SerializeField] private double baseCoinReward = 1d;
+    [SerializeField] private double baseGrowthPerClick = 0.35d;
     [SerializeField] private double coinBonusPerLevel = 0.1d;
     [SerializeField] private double clickBonusPerLevel = 0.25d;
     [SerializeField] private double growthSpeedBonusPerLevel = 0.15d;
@@ -359,7 +360,7 @@ public class GameManager : MonoBehaviour
 
     private double GetManualGrowthPerClick()
     {
-        return 1d + clickBonusPerLevel * GetUpgradeLevel(UpgradeType.ClickPower);
+        return Math.Max(0.01d, baseGrowthPerClick + clickBonusPerLevel * GetUpgradeLevel(UpgradeType.ClickPower));
     }
 
     private float GetGrowthSpeedMultiplier()

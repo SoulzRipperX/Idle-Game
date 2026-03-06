@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class UIManager : MonoBehaviour
 {
@@ -8,6 +9,7 @@ public class UIManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI autoText;
     [SerializeField] private TextMeshProUGUI plotText;
     [SerializeField] private TextMeshProUGUI saveStatusText;
+    [SerializeField] private Toggle autoToggle;
 
     private float saveMessageTimer;
 
@@ -68,6 +70,15 @@ public class UIManager : MonoBehaviour
             GameManager.Instance.ToggleAuto();
     }
 
+    public void OnAutoToggleChanged(bool isOn)
+    {
+        if (GameManager.Instance == null)
+            return;
+
+        if (GameManager.Instance.AutoEnabled != isOn)
+            GameManager.Instance.ToggleAuto();
+    }
+
     public void OnTapSell()
     {
         if (GameManager.Instance == null)
@@ -96,6 +107,9 @@ public class UIManager : MonoBehaviour
     {
         if (autoText == null) return;
         autoText.text = state ? "AUTO: ON" : "AUTO: OFF";
+
+        if (autoToggle != null)
+            autoToggle.SetIsOnWithoutNotify(state);
     }
 
     private void RefreshStats()

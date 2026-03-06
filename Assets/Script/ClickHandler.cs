@@ -15,9 +15,13 @@ public class ClickHandler : MonoBehaviour
         if (targetPool == null)
             return;
 
+        Vector2 pointerPos = Input.mousePosition;
+        if (Input.touchCount > 0)
+            pointerPos = Input.GetTouch(0).position;
+
         if (ripeCount > 0d)
-            targetPool.Spawn("Ready x" + ripeCount.ToString("F0"));
+            targetPool.SpawnAtScreenPosition("Ready x" + ripeCount.ToString("F0"), pointerPos);
         else
-            targetPool.Spawn("Water");
+            targetPool.SpawnAtScreenPosition("Water", pointerPos);
     }
 }

@@ -7,10 +7,13 @@ public class PlantPlot : MonoBehaviour
     [SerializeField] private GameObject plotRoot;
     [SerializeField] private Image uiImage;
     [SerializeField] private SpriteRenderer spriteRenderer;
+    [SerializeField] private Button clickButton;
     [SerializeField] private Sprite stage0Sprite;
     [SerializeField] private Sprite stage1Sprite;
     [SerializeField] private Sprite stage2Sprite;
     [SerializeField] private Sprite stage3Sprite;
+    [SerializeField] private Color unlockedColor = Color.white;
+    [SerializeField] private Color lockedColor = new Color(1f, 1f, 1f, 0.55f);
 
     [Header("State")]
     [SerializeField] private bool unlockedAtStart;
@@ -33,13 +36,14 @@ public class PlantPlot : MonoBehaviour
         isUnlocked = value;
 
         if (plotRoot != null)
-            plotRoot.SetActive(value);
+            plotRoot.SetActive(true);
         else
-            gameObject.SetActive(value);
+            gameObject.SetActive(true);
 
         if (!isUnlocked)
             growthProgress = 0f;
 
+        ApplyInteractableState();
         RefreshVisual();
     }
 
@@ -77,7 +81,7 @@ public class PlantPlot : MonoBehaviour
     {
         if (!isUnlocked)
         {
-            ApplySprite(null);
+            ApplySprite(stage0Sprite);
             return;
         }
 
@@ -103,9 +107,29 @@ public class PlantPlot : MonoBehaviour
     private void ApplySprite(Sprite sprite)
     {
         if (uiImage != null)
+        {
             uiImage.sprite = sprite;
+            uiImage.color = isUnlocked ? unlockedColor : lockedColor;
+        }
 
         if (spriteRenderer != null)
+        {
             spriteRenderer.sprite = sprite;
+            spriteRenderer.color = isUnlocked ? unlockedColor : lockedColor;
+        }
+    }
+
+    private void ApplyInteractableState()
+    {
+        if (clickButton == null)
+        {
+            if (plotRoot != null)
+                clickButton = plotRoot.GetComponent<Button>();
+            else
+                clickButton = GetComponent<Button>();
+        }
+
+        if (clickButton != null)
+            clickButton.interactable = isUnlocked;
     }
 }
