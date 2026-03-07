@@ -72,7 +72,12 @@ public class MenuController : MonoBehaviour
     public void ExitGame()
     {
         PlayUiClick();
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#elif UNITY_WEBGL
+#else
         Application.Quit();
+#endif
     }
 
     public void OpenOptions()
