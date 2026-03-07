@@ -7,6 +7,7 @@ public class PauseMenu : MonoBehaviour
     public GameObject PauseMenuCanvas;
     public string sceneToLoad;
     [SerializeField] private bool allowPauseWithoutCanvas = false;
+    [SerializeField] private AudioClip uiClickSfx;
 
     void Start()
     {
@@ -27,6 +28,8 @@ public class PauseMenu : MonoBehaviour
 
     public void TogglePause()
     {
+        PlayUiClick(0.8f);
+
         if (Paused)
             Play();
         else
@@ -53,7 +56,14 @@ public class PauseMenu : MonoBehaviour
 
     public void MainMenuButton()
     {
+        PlayUiClick();
         Time.timeScale = 1f;
         SceneManager.LoadScene(sceneToLoad);
+    }
+
+    private void PlayUiClick(float volumeScale = 1f)
+    {
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlayUiClick(uiClickSfx, volumeScale);
     }
 }

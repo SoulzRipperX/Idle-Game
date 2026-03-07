@@ -6,9 +6,11 @@ using UnityEngine.UI;
 
 public class MenuController : MonoBehaviour
 {
+    [SerializeField] private string gameSceneName = "Main_Game";
     public GameObject optionsMenu;
     public Slider volumeSlider;
     public Toggle bgmToggle;
+    [SerializeField] private AudioClip uiClickSfx;
 
 
     void Start()
@@ -59,17 +61,22 @@ public class MenuController : MonoBehaviour
 
     public void PlayGame()
     {
-
-        SceneManager.LoadScene(1);
+        PlayUiClick();
+        if (!string.IsNullOrWhiteSpace(gameSceneName))
+            SceneManager.LoadScene(gameSceneName);
+        else
+            SceneManager.LoadScene(1);
     }
 
     public void ExitGame()
     {
+        PlayUiClick();
         Application.Quit();
     }
 
     public void OpenOptions()
     {
+        PlayUiClick();
         if (optionsMenu != null)
         {
             optionsMenu.SetActive(true);
@@ -78,6 +85,7 @@ public class MenuController : MonoBehaviour
 
     public void CloseOptions()
     {
+        PlayUiClick();
         if (optionsMenu != null)
         {
             optionsMenu.SetActive(false);
@@ -100,8 +108,30 @@ public class MenuController : MonoBehaviour
         }
     }
 
+    public GameObject creditPanel;
+
+    public void OpenCredits()
+    {
+        PlayUiClick();
+        if (creditPanel != null)
+            creditPanel.SetActive(true);
+        else
+            Debug.LogWarning("MenuController: creditPanel is not assigned.");
+    }
+
+    public void CloseCredits()
+    {
+        PlayUiClick();
+        if (creditPanel != null)
+            creditPanel.SetActive(false);
+        else
+            Debug.LogWarning("MenuController: creditPanel is not assigned.");
+    }
+
     public void OnBgmToggleChanged(bool isOn)
     {
+        PlayUiClick(0.7f);
+
         if (AudioManager.Instance != null)
         {
             AudioManager.Instance.SetBgmEnabled(isOn);
@@ -110,5 +140,11 @@ public class MenuController : MonoBehaviour
         {
             PlayerPrefs.SetInt("BGM_Enabled", isOn ? 1 : 0);
         }
+    }
+
+    private void PlayUiClick(float volumeScale = 1f)
+    {
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlayUiClick(uiClickSfx, volumeScale);
     }
 }

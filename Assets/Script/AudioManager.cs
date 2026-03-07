@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class AudioManager : MonoBehaviour
 {
@@ -9,7 +10,9 @@ public class AudioManager : MonoBehaviour
     [SerializeField] private AudioSource sfxSource;
 
     [Header("SFX")]
-    [SerializeField] private AudioClip plotClickSfx;
+    [FormerlySerializedAs("plotClickSfx")]
+    [SerializeField] private AudioClip gardenClickSfx;
+    [SerializeField] private AudioClip uiClickSfx;
     [SerializeField] private AudioClip sellSfx;
     [SerializeField] private AudioClip upgradeSfx;
 
@@ -47,15 +50,21 @@ public class AudioManager : MonoBehaviour
         ApplySettings();
     }
 
-    public void PlayPlotClick(AudioClip overrideClip = null, float volumeScale = 1f)
+    public void PlayGardenClick(AudioClip overrideClip = null, float volumeScale = 1f)
     {
-        AudioClip clip = overrideClip != null ? overrideClip : plotClickSfx;
+        AudioClip clip = overrideClip != null ? overrideClip : gardenClickSfx;
         PlaySfx(clip, volumeScale);
     }
 
     public void PlaySell(AudioClip overrideClip = null, float volumeScale = 1f)
     {
         AudioClip clip = overrideClip != null ? overrideClip : sellSfx;
+        PlaySfx(clip, volumeScale);
+    }
+
+    public void PlayUiClick(AudioClip overrideClip = null, float volumeScale = 1f)
+    {
+        AudioClip clip = overrideClip != null ? overrideClip : uiClickSfx;
         PlaySfx(clip, volumeScale);
     }
 

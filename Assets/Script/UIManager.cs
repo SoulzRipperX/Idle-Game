@@ -7,10 +7,11 @@ public class UIManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI moneyText;
     [SerializeField] private TextMeshProUGUI incomeText;
     [SerializeField] private TextMeshProUGUI autoText;
-    [SerializeField] private TextMeshProUGUI plotText;
+    [SerializeField] private TextMeshProUGUI GardenText;
     [SerializeField] private TextMeshProUGUI saveStatusText;
     [SerializeField] private TextMeshProUGUI saveSlotText;
     [SerializeField] private Toggle autoToggle;
+    [SerializeField] private AudioClip uiClickSfx;
     [SerializeField] private AudioClip sellSfx;
 
     private float saveMessageTimer;
@@ -58,18 +59,24 @@ public class UIManager : MonoBehaviour
 
     public void OnTapSave()
     {
+        PlayUiClick();
+
         if (GameManager.Instance != null)
             GameManager.Instance.ManualSave();
     }
 
     public void OnTapLoad()
     {
+        PlayUiClick();
+
         if (GameManager.Instance != null)
             GameManager.Instance.ManualLoad();
     }
 
     public void OnTapDeleteSave()
     {
+        PlayUiClick();
+
         if (GameManager.Instance == null)
             return;
 
@@ -79,15 +86,23 @@ public class UIManager : MonoBehaviour
 
     public void OnTapOpenSaveFolder()
     {
+        PlayUiClick();
+
         if (GameManager.Instance == null)
             return;
 
         GameManager.Instance.OpenSaveFolder();
+#if UNITY_WEBGL || UNITY_ANDROID || UNITY_IOS
+        // On these platforms GameManager sends a platform-safe message.
+#else
         ShowSaveMessage("Open: " + GameManager.Instance.GetSaveFolderPath());
+#endif
     }
 
     public void OnTapNextSaveSlot()
     {
+        PlayUiClick();
+
         if (GameManager.Instance == null)
             return;
 
@@ -105,12 +120,16 @@ public class UIManager : MonoBehaviour
 
     public void OnTapAuto()
     {
+        PlayUiClick(0.7f);
+
         if (GameManager.Instance != null)
             GameManager.Instance.SetAutoEnabled(!GameManager.Instance.AutoEnabled);
     }
 
     public void OnAutoToggleChanged(bool isOn)
     {
+        PlayUiClick(0.7f);
+
         if (GameManager.Instance == null)
             return;
 
@@ -135,7 +154,7 @@ public class UIManager : MonoBehaviour
             ShowSaveMessage("Sold +" + GameManager.Instance.FormatMoney(earned));
         }
         else
-            ShowSaveMessage("No ripe plant");
+            ShowSaveMessage("No ready plant");
     }
 
     private void UpdateMoney(double value)
@@ -162,9 +181,9 @@ public class UIManager : MonoBehaviour
 
     private void RefreshStats()
     {
-        if (GameManager.Instance == null || plotText == null) return;
+        if (GameManager.Instance == null || GardenText == null) return;
 
-        plotText.text = $"Plots: {GameManager.Instance.GetUnlockedPlotCount()}/{GameManager.Instance.GetMaxPlotCount()}  Ripe: {GameManager.Instance.GetRipePlotCount()}";
+        GardenText.text = $"Garden: {GameManager.Instance.GetUnlockedGardenCount()}/{GameManager.Instance.GetMaxGardenCount()}  Ready: {GameManager.Instance.GetReadyGardenCount()}";
         RefreshSaveSlotLabel();
     }
 
@@ -221,5 +240,11 @@ public class UIManager : MonoBehaviour
             return (num / 1_000d).ToString("F1") + "K";
 
         return num.ToString("F1");
+    }
+
+    private void PlayUiClick(float volumeScale = 1f)
+    {
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlayUiClick(uiClickSfx, volumeScale);
     }
 }

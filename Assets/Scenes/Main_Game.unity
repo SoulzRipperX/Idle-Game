@@ -823,7 +823,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 0}
+  m_Sprite: {fileID: -711701566, guid: f502ffe63da8fb848ade13ba7ba3d7df, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -898,7 +898,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Coin Value
+  m_text: Coin Multiplier
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -1144,7 +1144,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &203242397
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1282,7 +1282,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.8553459, g: 0.8553459, b: 0.8553459, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -2441,8 +2441,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0}
   m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: -202.99982, y: 47.99991}
-  m_SizeDelta: {x: 400, y: 100}
+  m_AnchoredPosition: {x: -202.99982, y: 101.99994}
+  m_SizeDelta: {x: 400, y: 200}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &479015904
 MonoBehaviour:
@@ -2527,7 +2527,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 0, y: 0, z: 0, w: 0}
+  m_margin: {x: -395.51892, y: 0, z: 0, w: 0}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -2575,7 +2575,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -734, y: 422.0001}
+  m_AnchoredPosition: {x: -572, y: 395.0001}
   m_SizeDelta: {x: 450, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &489711705
@@ -2956,7 +2956,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 519420028}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3a7e02003e2f2aa4498f4f6cb144e3ed, type: 3}
   m_Name: 
@@ -3147,7 +3147,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.6981132, g: 0.6981132, b: 0.6981132, a: 1}
+  m_Color: {r: 0.6981132, g: 0.6981132, b: 0.6981132, a: 0.85882354}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -3290,6 +3290,81 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &637457225
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 637457226}
+  - component: {fileID: 637457228}
+  - component: {fileID: 637457227}
+  m_Layer: 5
+  m_Name: Image
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &637457226
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 637457225}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1709305874}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 81, y: -108}
+  m_SizeDelta: {x: 150, y: 125}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &637457227
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 637457225}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 1574677774, guid: caff77f4732662642912dc4b9e1fd3f1, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &637457228
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 637457225}
+  m_CullTransparentMesh: 1
 --- !u!1 &641692466
 GameObject:
   m_ObjectHideFlags: 0
@@ -3324,7 +3399,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -734, y: 483}
+  m_AnchoredPosition: {x: -572, y: 456}
   m_SizeDelta: {x: 450, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &641692468
@@ -3665,7 +3740,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: db0eeaf40888f2f489a62bcb5f4b32fb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  plotRoot: {fileID: 717302644}
+  gardenRoot: {fileID: 0}
   uiImage: {fileID: 717302648}
   spriteRenderer: {fileID: 0}
   clickButton: {fileID: 717302646}
@@ -3759,7 +3834,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   pool: {fileID: 1053776529}
-  targetPlot: {fileID: 717302647}
+  targetGarden: {fileID: 717302647}
   clickSfx: {fileID: 0}
 --- !u!1 &825172810
 GameObject:
@@ -3773,7 +3848,7 @@ GameObject:
   - component: {fileID: 825172812}
   - component: {fileID: 825172811}
   m_Layer: 5
-  m_Name: PlotText
+  m_Name: GardenText
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3799,9 +3874,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'Plot
-
-'
+  m_text: Garden
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -4882,7 +4955,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: db0eeaf40888f2f489a62bcb5f4b32fb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  plotRoot: {fileID: 1182742472}
+  gardenRoot: {fileID: 0}
   uiImage: {fileID: 1182742476}
   spriteRenderer: {fileID: 0}
   clickButton: {fileID: 1182742474}
@@ -4988,7 +5061,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -90128668, guid: 290555106861bca4191180def14f57cf, type: 3}
+  m_Sprite: {fileID: -1479167414, guid: 290555106861bca4191180def14f57cf, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -5543,7 +5616,7 @@ RectTransform:
   m_Father: {fileID: 592599301}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 10, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -5845,7 +5918,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   pool: {fileID: 1053776529}
-  targetPlot: {fileID: 1182742475}
+  targetGarden: {fileID: 1182742475}
   clickSfx: {fileID: 0}
 --- !u!1 &1309383083
 GameObject:
@@ -5891,7 +5964,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 52d526300be2ba843bc6f8c08aa59ae1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  plots:
+  gardens:
   - {fileID: 1912810677}
   - {fileID: 717302647}
   - {fileID: 1632034274}
@@ -5903,6 +5976,9 @@ MonoBehaviour:
   growthSpeedBonusPerLevel: 0.25
   autoInterval: 1
   autoGrowthMultiplier: 0.2
+  enableOfflineProgress: 1
+  maxOfflineHours: 8
+  offlineGrowthMultiplier: 0.85
   autoSaveInterval: 10
   upgradeBalances:
   - type: 0
@@ -6378,6 +6454,7 @@ MonoBehaviour:
   PauseMenuCanvas: {fileID: 203242396}
   sceneToLoad: Main_Menu
   allowPauseWithoutCanvas: 0
+  uiClickSfx: {fileID: 0}
 --- !u!1 &1429640406
 GameObject:
   m_ObjectHideFlags: 0
@@ -6644,10 +6721,11 @@ MonoBehaviour:
   moneyText: {fileID: 641692468}
   incomeText: {fileID: 489711705}
   autoText: {fileID: 879813269}
-  plotText: {fileID: 825172811}
+  GardenText: {fileID: 825172811}
   saveStatusText: {fileID: 479015904}
   saveSlotText: {fileID: 479015904}
   autoToggle: {fileID: 879813271}
+  uiClickSfx: {fileID: 0}
   sellSfx: {fileID: 0}
 --- !u!1 &1491198930
 GameObject:
@@ -6666,7 +6744,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!114 &1491198931
 MonoBehaviour:
@@ -6683,6 +6761,8 @@ MonoBehaviour:
   popDuration: 0.4
   loopScale: 1.1
   loopSpeed: 2
+  useFixedOriginalScale: 1
+  fixedOriginalScale: {x: 1, y: 1, z: 1}
 --- !u!114 &1491198932
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6797,7 +6877,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -1640894454, guid: 5517a946a5c4ce64da25c11af5effc34, type: 3}
+  m_Sprite: {fileID: -1060733189, guid: 5517a946a5c4ce64da25c11af5effc34, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -6942,7 +7022,7 @@ AudioSource:
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 8300000, guid: 20813929bccbb19489f3953be5666f68, type: 3}
   m_PlayOnAwake: 1
-  m_Volume: 1
+  m_Volume: 0.5
   m_Pitch: 1
   Loop: 0
   Mute: 0
@@ -7040,7 +7120,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   bgmSource: {fileID: 1587435264}
   sfxSource: {fileID: 1587435263}
-  plotClickSfx: {fileID: 8300000, guid: c7e9f1c0a2f83fe42905d65dd8ce5629, type: 3}
+  gardenClickSfx: {fileID: 8300000, guid: c7e9f1c0a2f83fe42905d65dd8ce5629, type: 3}
+  uiClickSfx: {fileID: 8300000, guid: 7e93825df71dfe34babab8dc02882db0, type: 3}
   sellSfx: {fileID: 8300000, guid: fcad0b3a9ac75d14b91016f839be4dee, type: 3}
   upgradeSfx: {fileID: 8300000, guid: 2e68b571138575544afebe0fe6c30a29, type: 3}
 --- !u!4 &1587435266
@@ -7115,7 +7196,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 667385157, guid: 33b972b2b19cfd0459e0205a194abc46, type: 3}
+  m_Sprite: {fileID: 1187437758, guid: 43eec68fee34dfe4f99d63987a02ab8e, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -7284,7 +7365,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1625834545
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7483,7 +7564,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: db0eeaf40888f2f489a62bcb5f4b32fb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  plotRoot: {fileID: 1632034271}
+  gardenRoot: {fileID: 0}
   uiImage: {fileID: 1632034275}
   spriteRenderer: {fileID: 0}
   clickButton: {fileID: 1632034273}
@@ -7899,7 +7980,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   pool: {fileID: 1053776529}
-  targetPlot: {fileID: 1632034274}
+  targetGarden: {fileID: 1632034274}
   clickSfx: {fileID: 0}
 --- !u!1 &1699005381
 GameObject:
@@ -8131,6 +8212,7 @@ RectTransform:
   - {fileID: 213619049}
   - {fileID: 641692467}
   - {fileID: 489711704}
+  - {fileID: 637457226}
   - {fileID: 879813268}
   - {fileID: 825172813}
   - {fileID: 1293961628}
@@ -8280,9 +8362,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a61a7268800e2304fa8f83f0a6e5ec50, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  gameSceneName: Main_Game
   optionsMenu: {fileID: 1625834544}
   volumeSlider: {fileID: 1730481199}
-  bgmToggle: {fileID: 0}
+  bgmToggle: {fileID: 1883584386}
+  uiClickSfx: {fileID: 0}
+  creditPanel: {fileID: 0}
 --- !u!4 &1763259375
 Transform:
   m_ObjectHideFlags: 0
@@ -8826,7 +8911,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: db0eeaf40888f2f489a62bcb5f4b32fb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  plotRoot: {fileID: 1912810671}
+  gardenRoot: {fileID: 0}
   uiImage: {fileID: 1912810675}
   spriteRenderer: {fileID: 0}
   clickButton: {fileID: 1912810674}
@@ -9150,7 +9235,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   pool: {fileID: 1053776529}
-  targetPlot: {fileID: 1912810677}
+  targetGarden: {fileID: 1912810677}
   clickSfx: {fileID: 0}
 --- !u!1 &2057484062
 GameObject:
@@ -9394,7 +9479,7 @@ RectTransform:
   m_Father: {fileID: 1730481198}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: -10, y: 0}
   m_SizeDelta: {x: 50, y: -4}
   m_Pivot: {x: 0.5, y: 0.5}

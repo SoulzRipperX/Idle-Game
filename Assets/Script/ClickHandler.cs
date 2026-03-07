@@ -1,15 +1,17 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class ClickHandler : MonoBehaviour
 {
     [SerializeField] private FloatingTextPool pool;
-    [SerializeField] private PlantPlot targetPlot;
+    [FormerlySerializedAs("targetPlot")]
+    [SerializeField] private PlantGarden targetGarden;
     [SerializeField] private AudioClip clickSfx;
 
     private void Awake()
     {
-        if (targetPlot == null)
-            targetPlot = GetComponent<PlantPlot>();
+        if (targetGarden == null)
+            targetGarden = GetComponent<PlantGarden>();
     }
 
     public void Click()
@@ -17,9 +19,9 @@ public class ClickHandler : MonoBehaviour
         if (GameManager.Instance == null)
             return;
 
-        bool becameRipe = GameManager.Instance.WaterPlotByClick(targetPlot);
+        bool becameRipe = GameManager.Instance.WaterGardenByClick(targetGarden);
         if (AudioManager.Instance != null)
-            AudioManager.Instance.PlayPlotClick(clickSfx);
+            AudioManager.Instance.PlayGardenClick(clickSfx);
 
         FloatingTextPool targetPool = pool != null ? pool : FloatingTextPool.Instance;
         if (targetPool == null)

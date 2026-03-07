@@ -16,6 +16,12 @@ public class FixRatio : MonoBehaviour
 
     void UpdateCamera()
     {
+        if (targetCamera == null)
+        {
+            Debug.LogWarning("FixRatio: targetCamera is null.");
+            return;
+        }
+
         float screenAspect = (float)Screen.width / Screen.height;
         float scaleHeight = screenAspect / targetAspect;
 

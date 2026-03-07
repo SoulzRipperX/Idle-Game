@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 290555106861bca4191180def14f57cf
+guid: 43eec68fee34dfe4f99d63987a02ab8e
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -149,13 +149,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Coin_0
+      name: Upgrade_0
       rect:
         serializedVersion: 2
-        x: 197
-        y: 234
-        width: 122
-        height: 122
+        x: 287
+        y: 221
+        width: 79
+        height: 100
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -163,8 +163,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 9e8ec585b9ac92c4e90b5d5f28f6e8d4
-      internalID: -1479167414
+      spriteID: d1c93261a677f9148b78c7ccd3b5544a
+      internalID: 1187437758
       vertices: []
       indices: 
       edges: []
@@ -180,7 +180,7 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     nameFileIdTable:
-      Coin_0: -1479167414
+      Upgrade_0: 1187437758
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

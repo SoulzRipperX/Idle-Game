@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Diagnostics;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class GameManager : MonoBehaviour
 {
@@ -37,23 +38,32 @@ public class GameManager : MonoBehaviour
     {
         public string money;
         public int autoEnabled;
+        public string lastSavedUtc;
         public List<UpgradeSave> upgrades = new List<UpgradeSave>();
-        public List<float> plotProgress = new List<float>();
+        public List<float> gardenProgress = new List<float>();
+        public List<float> GardenProgress = new List<float>();
     }
 
     [Header("Core")]
-    [SerializeField] private PlantPlot[] plots;
+    [FormerlySerializedAs("Garden")]
+    [FormerlySerializedAs("Gardens")]
+    [SerializeField] private PlantGarden[] gardens;
 
     [Header("Economy")]
     [SerializeField] private double baseCoinReward = 1d;
-    [SerializeField] private double baseGrowthPerClick = 0.35d;
-    [SerializeField] private double coinBonusPerLevel = 0.1d;
-    [SerializeField] private double clickBonusPerLevel = 0.25d;
-    [SerializeField] private double growthSpeedBonusPerLevel = 0.15d;
+    [SerializeField] private double baseGrowthPerClick = 0.2d;
+    [SerializeField] private double coinBonusPerLevel = 0.08d;
+    [SerializeField] private double clickBonusPerLevel = 0.08d;
+    [SerializeField] private double growthSpeedBonusPerLevel = 0.1d;
 
     [Header("Auto")]
-    [SerializeField] private float autoInterval = 1.8f;
-    [SerializeField] private float autoGrowthMultiplier = 0.4f;
+    [SerializeField] private float autoInterval = 2.2f;
+    [SerializeField] private float autoGrowthMultiplier = 0.3f;
+
+    [Header("Offline Progress")]
+    [SerializeField] private bool enableOfflineProgress = true;
+    [SerializeField] private float maxOfflineHours = 8f;
+    [SerializeField] private float offlineGrowthMultiplier = 0.85f;
 
     [Header("Save")]
     [SerializeField] private float autoSaveInterval = 10f;
@@ -71,11 +81,14 @@ public class GameManager : MonoBehaviour
     private const string ActiveSlotKey = "FarmIdleSave_ActiveSlot";
     private const int SlotCount = 3;
     private const string SaveFolderName = "Saves";
+
     private float autoTimer;
     private float autoSellTimer;
     private float saveTimer;
     private bool hasPendingSave;
     private int activeSaveSlot = 1;
+    private double lastOfflineEarned;
+    private double lastOfflineSeconds;
 
     private void Awake()
     {
@@ -109,7 +122,7 @@ public class GameManager : MonoBehaviour
             float safeInterval = Mathf.Max(0.3f, autoInterval);
             while (autoTimer >= safeInterval)
             {
-                ApplyWaterToActivePlots(GetAutoGrowthPerTick());
+                ApplyWaterToActiveGardens(GetAutoGrowthPerTick());
                 autoTimer -= safeInterval;
             }
 
@@ -157,19 +170,19 @@ public class GameManager : MonoBehaviour
 
     public double WaterByClick()
     {
-        return ApplyWaterToActivePlots((float)(GetManualGrowthPerClick() * GetGrowthSpeedMultiplier()));
+        return ApplyWaterToActiveGardens((float)(GetManualGrowthPerClick() * GetGrowthSpeedMultiplier()));
     }
 
-    public bool WaterPlotByClick(PlantPlot targetPlot)
+    public bool WaterGardenByClick(PlantGarden targetGarden)
     {
-        if (targetPlot == null)
+        if (targetGarden == null)
             return false;
 
-        if (!IsPlotWaterable(targetPlot))
+        if (!IsGardenWaterable(targetGarden))
             return false;
 
         float amount = (float)(GetManualGrowthPerClick() * GetGrowthSpeedMultiplier());
-        bool becameRipe = targetPlot.AddGrowth(amount);
+        bool becameRipe = targetGarden.AddGrowth(amount);
         OnGameStateChanged?.Invoke();
         return becameRipe;
     }
@@ -182,14 +195,14 @@ public class GameManager : MonoBehaviour
     private double SellAllRipeInternal()
     {
         int ripeCount = 0;
-        int activePlots = GetUnlockedPlotCount();
+        int activeGardens = GetUnlockedGardenCount();
 
-        for (int i = 0; i < plots.Length; i++)
+        for (int i = 0; i < gardens.Length; i++)
         {
-            if (plots[i] == null || i >= activePlots)
+            if (gardens[i] == null || i >= activeGardens)
                 continue;
 
-            if (plots[i].HarvestAndReset())
+            if (gardens[i].HarvestAndReset())
                 ripeCount++;
         }
 
@@ -219,8 +232,8 @@ public class GameManager : MonoBehaviour
 
         upgradeLevels[type] = level + 1;
 
-        if (type == UpgradeType.PlotUnlock)
-            ApplyPlotUnlocks();
+        if (type == UpgradeType.GardenUnlock)
+            ApplyGardenUnlocks();
 
         hasPendingSave = true;
         RecalculateIncome();
@@ -239,14 +252,14 @@ public class GameManager : MonoBehaviour
         if (cfg != null)
         {
             int configuredMax = Mathf.Max(1, cfg.maxLevel);
-            if (type == UpgradeType.PlotUnlock)
-                return Mathf.Min(configuredMax, Mathf.Max(0, plots.Length - 1));
+            if (type == UpgradeType.GardenUnlock)
+                return Mathf.Min(configuredMax, Mathf.Max(0, gardens.Length - 1));
 
             return configuredMax;
         }
 
-        if (type == UpgradeType.PlotUnlock)
-            return Mathf.Max(0, plots.Length - 1);
+        if (type == UpgradeType.GardenUnlock)
+            return Mathf.Max(0, gardens.Length - 1);
         if (type == UpgradeType.AutoSell)
             return 10;
 
@@ -268,15 +281,15 @@ public class GameManager : MonoBehaviour
         switch (type)
         {
             case UpgradeType.CoinValue:
-                return 20d * Math.Pow(1.35d, level);
+                return 25d * Math.Pow(1.40d, level);
             case UpgradeType.ClickPower:
-                return 15d * Math.Pow(1.30d, level);
+                return 20d * Math.Pow(1.45d, level);
             case UpgradeType.GrowthSpeed:
-                return 30d * Math.Pow(1.40d, level);
-            case UpgradeType.PlotUnlock:
-                return 120d * Math.Pow(2.20d, level);
+                return 35d * Math.Pow(1.50d, level);
+            case UpgradeType.GardenUnlock:
+                return 150d * Math.Pow(2.40d, level);
             case UpgradeType.AutoSell:
-                return 75d * Math.Pow(1.55d, level);
+                return 100d * Math.Pow(1.70d, level);
             default:
                 return 999999d;
         }
@@ -290,40 +303,45 @@ public class GameManager : MonoBehaviour
 
         switch (type)
         {
-            case UpgradeType.CoinValue: return "Coin Value";
+            case UpgradeType.CoinValue: return "Coin Multiplier";
             case UpgradeType.ClickPower: return "Click Power";
             case UpgradeType.GrowthSpeed: return "Growth Speed";
-            case UpgradeType.PlotUnlock: return "Unlock Plot";
+            case UpgradeType.GardenUnlock: return "Unlock Garden";
             case UpgradeType.AutoSell: return "Auto Sell";
             default: return type.ToString();
         }
     }
 
-    public int GetUnlockedPlotCount()
+    public int GetUnlockedGardenCount()
     {
-        return Mathf.Clamp(1 + GetUpgradeLevel(UpgradeType.PlotUnlock), 1, Mathf.Max(1, plots.Length));
+        return Mathf.Clamp(1 + GetUpgradeLevel(UpgradeType.GardenUnlock), 1, Mathf.Max(1, gardens.Length));
     }
 
-    public int GetMaxPlotCount()
+    public int GetMaxGardenCount()
     {
-        return Mathf.Max(1, plots.Length);
+        return Mathf.Max(1, gardens.Length);
     }
 
-    public int GetRipePlotCount()
+    public int GetRipeGardenCount()
     {
         int ripe = 0;
-        int activePlots = GetUnlockedPlotCount();
+        int activeGardens = GetUnlockedGardenCount();
 
-        for (int i = 0; i < plots.Length; i++)
+        for (int i = 0; i < gardens.Length; i++)
         {
-            if (plots[i] == null || i >= activePlots)
+            if (gardens[i] == null || i >= activeGardens)
                 continue;
 
-            if (plots[i].IsRipe)
+            if (gardens[i].IsRipe)
                 ripe++;
         }
 
         return ripe;
+    }
+
+    public int GetReadyGardenCount()
+    {
+        return GetRipeGardenCount();
     }
 
     public double GetCoinRewardPerHarvest()
@@ -364,7 +382,10 @@ public class GameManager : MonoBehaviour
         autoTimer = 0f;
         autoSellTimer = 0f;
         RefreshAll();
-        OnSaveMessage?.Invoke($"Loaded (Slot {activeSaveSlot})");
+        if (lastOfflineEarned > 0d)
+            OnSaveMessage?.Invoke($"Loaded +{FormatMoney(lastOfflineEarned)} ({FormatOfflineTime(lastOfflineSeconds)} offline)");
+        else
+            OnSaveMessage?.Invoke($"Loaded (Slot {activeSaveSlot})");
     }
 
     public int GetActiveSaveSlot()
@@ -403,6 +424,10 @@ public class GameManager : MonoBehaviour
 
     public void OpenSaveFolder()
     {
+#if UNITY_WEBGL || UNITY_ANDROID || UNITY_IOS
+        OnSaveMessage?.Invoke("Open Save Folder is only available on PC build");
+        return;
+#else
         string folder = GetSaveDirectoryPath();
         if (!Directory.Exists(folder))
             Directory.CreateDirectory(folder);
@@ -423,6 +448,7 @@ public class GameManager : MonoBehaviour
         {
             UnityEngine.Debug.LogWarning("Cannot open save folder: " + e.Message);
         }
+#endif
     }
 
     public void DeleteActiveSaveSlot()
@@ -439,7 +465,6 @@ public class GameManager : MonoBehaviour
             File.Delete(filePath);
             if (File.Exists(filePath))
             {
-                // Last-resort: clear attributes and retry delete.
                 File.SetAttributes(filePath, FileAttributes.Normal);
                 File.Delete(filePath);
             }
@@ -450,7 +475,6 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        // Cleanup legacy key if an old PlayerPrefs save exists.
         PlayerPrefs.DeleteKey(GetSaveKey(activeSaveSlot));
         PlayerPrefs.Save();
 
@@ -466,19 +490,19 @@ public class GameManager : MonoBehaviour
         OnSaveMessage?.Invoke($"Deleted Slot {activeSaveSlot}");
     }
 
-    private double ApplyWaterToActivePlots(float growthAmount)
+    private double ApplyWaterToActiveGardens(float growthAmount)
     {
         if (growthAmount <= 0f) return 0d;
 
         int becameRipeCount = 0;
-        int activePlots = GetUnlockedPlotCount();
+        int activeGardens = GetUnlockedGardenCount();
 
-        for (int i = 0; i < plots.Length; i++)
+        for (int i = 0; i < gardens.Length; i++)
         {
-            if (plots[i] == null || i >= activePlots)
+            if (gardens[i] == null || i >= activeGardens)
                 continue;
 
-            if (plots[i].AddGrowth(growthAmount))
+            if (gardens[i].AddGrowth(growthAmount))
                 becameRipeCount++;
         }
 
@@ -486,16 +510,16 @@ public class GameManager : MonoBehaviour
         return becameRipeCount;
     }
 
-    private bool IsPlotWaterable(PlantPlot plot)
+    private bool IsGardenWaterable(PlantGarden garden)
     {
-        int activePlots = GetUnlockedPlotCount();
+        int activeGardens = GetUnlockedGardenCount();
 
-        for (int i = 0; i < plots.Length; i++)
+        for (int i = 0; i < gardens.Length; i++)
         {
-            if (plots[i] == null || i >= activePlots)
+            if (gardens[i] == null || i >= activeGardens)
                 continue;
 
-            if (ReferenceEquals(plots[i], plot))
+            if (ReferenceEquals(gardens[i], garden))
                 return true;
         }
 
@@ -537,14 +561,14 @@ public class GameManager : MonoBehaviour
         return true;
     }
 
-    private void ApplyPlotUnlocks()
+    private void ApplyGardenUnlocks()
     {
-        int unlocked = GetUnlockedPlotCount();
+        int unlocked = GetUnlockedGardenCount();
 
-        for (int i = 0; i < plots.Length; i++)
+        for (int i = 0; i < gardens.Length; i++)
         {
-            if (plots[i] == null) continue;
-            plots[i].SetUnlocked(i < unlocked);
+            if (gardens[i] == null) continue;
+            gardens[i].SetUnlocked(i < unlocked);
         }
     }
 
@@ -557,8 +581,8 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        int activePlots = GetUnlockedPlotCount();
-        if (activePlots <= 0)
+        int activeGardens = GetUnlockedGardenCount();
+        if (activeGardens <= 0)
         {
             IncomePerSecond = 0d;
             OnIncomeChanged?.Invoke(IncomePerSecond);
@@ -572,9 +596,9 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        double growthPerSecondPerPlot = GetAutoGrowthPerTick() / Mathf.Max(0.3f, autoInterval);
-        double harvestPerSecondPerPlot = growthPerSecondPerPlot / 3d;
-        IncomePerSecond = activePlots * harvestPerSecondPerPlot * GetCoinRewardPerHarvest();
+        double growthPerSecondPerGarden = GetAutoGrowthPerTick() / Mathf.Max(0.3f, autoInterval);
+        double harvestPerSecondPerGarden = growthPerSecondPerGarden / 3d;
+        IncomePerSecond = activeGardens * harvestPerSecondPerGarden * GetCoinRewardPerHarvest();
         OnIncomeChanged?.Invoke(IncomePerSecond);
     }
 
@@ -597,17 +621,20 @@ public class GameManager : MonoBehaviour
                 upgradeLevels[type] = 0;
         }
 
-        for (int i = 0; i < plots.Length; i++)
+        if (gardens == null)
+            return;
+
+        for (int i = 0; i < gardens.Length; i++)
         {
-            if (plots[i] == null) continue;
-            plots[i].SetUnlocked(i == 0);
-            plots[i].SetGrowthProgress(0f);
+            if (gardens[i] == null) continue;
+            gardens[i].SetUnlocked(i == 0);
+            gardens[i].SetGrowthProgress(0f);
         }
     }
 
     private void RefreshAll()
     {
-        ApplyPlotUnlocks();
+        ApplyGardenUnlocks();
         RecalculateIncome();
         OnMoneyChanged?.Invoke(Money);
         OnAutoStateChanged?.Invoke(AutoEnabled);
@@ -619,7 +646,8 @@ public class GameManager : MonoBehaviour
         SaveData data = new SaveData
         {
             money = Money.ToString("R", CultureInfo.InvariantCulture),
-            autoEnabled = AutoEnabled ? 1 : 0
+            autoEnabled = AutoEnabled ? 1 : 0,
+            lastSavedUtc = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture)
         };
 
         foreach (KeyValuePair<UpgradeType, int> pair in upgradeLevels)
@@ -631,9 +659,9 @@ public class GameManager : MonoBehaviour
             });
         }
 
-        for (int i = 0; i < plots.Length; i++)
+        for (int i = 0; i < gardens.Length; i++)
         {
-            data.plotProgress.Add(plots[i] != null ? plots[i].GrowthProgress : 0f);
+            data.gardenProgress.Add(gardens[i] != null ? gardens[i].GrowthProgress : 0f);
         }
 
         string folder = GetSaveDirectoryPath();
@@ -647,6 +675,8 @@ public class GameManager : MonoBehaviour
 
     private void LoadGame()
     {
+        lastOfflineEarned = 0d;
+        lastOfflineSeconds = 0d;
         EnsureUpgradeDictionary();
 
         string filePath = GetSaveFilePath(activeSaveSlot);
@@ -683,18 +713,116 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        ApplyPlotUnlocks();
+        ApplyGardenUnlocks();
 
-        if (data.plotProgress != null)
+        List<float> loadedProgress = data.gardenProgress;
+        if ((loadedProgress == null || loadedProgress.Count == 0) && data.GardenProgress != null && data.GardenProgress.Count > 0)
+            loadedProgress = data.GardenProgress;
+
+        if (loadedProgress != null)
         {
-            for (int i = 0; i < plots.Length && i < data.plotProgress.Count; i++)
+            for (int i = 0; i < gardens.Length && i < loadedProgress.Count; i++)
             {
-                if (plots[i] == null) continue;
-                plots[i].SetGrowthProgress(data.plotProgress[i]);
+                if (gardens[i] == null) continue;
+                gardens[i].SetGrowthProgress(loadedProgress[i]);
             }
         }
 
+        ApplyOfflineProgress(data.lastSavedUtc);
+
         hasPendingSave = false;
+    }
+
+    private void ApplyOfflineProgress(string lastSavedUtc)
+    {
+        if (!enableOfflineProgress || gardens == null || gardens.Length == 0)
+            return;
+
+        if (!TryParseUtc(lastSavedUtc, out DateTime savedAt))
+            return;
+
+        double elapsedSeconds = (DateTime.UtcNow - savedAt).TotalSeconds;
+        if (elapsedSeconds <= 1d)
+            return;
+
+        double cappedSeconds = Math.Min(elapsedSeconds, Math.Max(0d, maxOfflineHours * 3600d));
+        double effectiveSeconds = cappedSeconds * Math.Max(0f, offlineGrowthMultiplier);
+        if (effectiveSeconds <= 0d)
+            return;
+
+        int activeGardens = GetUnlockedGardenCount();
+        if (activeGardens <= 0)
+            return;
+
+        bool hasAutoSell = GetUpgradeLevel(UpgradeType.AutoSell) > 0;
+        bool canRunAutoCycle = AutoEnabled;
+        double growthPerSecondPerGarden = GetAutoGrowthPerTick() / Math.Max(0.3f, autoInterval);
+        if (growthPerSecondPerGarden <= 0d)
+            return;
+
+        int harvestCount = 0;
+        for (int i = 0; i < gardens.Length; i++)
+        {
+            if (i >= activeGardens || gardens[i] == null)
+                continue;
+
+            float progress = gardens[i].GrowthProgress;
+
+            if (!canRunAutoCycle)
+            {
+                float nextProgress = Mathf.Min(3f, progress + (float)effectiveSeconds * (float)growthPerSecondPerGarden);
+                gardens[i].SetGrowthProgress(nextProgress);
+                continue;
+            }
+
+            if (!hasAutoSell)
+            {
+                float nextProgress = Mathf.Min(3f, progress + (float)effectiveSeconds * (float)growthPerSecondPerGarden);
+                gardens[i].SetGrowthProgress(nextProgress);
+                continue;
+            }
+
+            double totalProgress = progress + (effectiveSeconds * growthPerSecondPerGarden);
+            int harvested = Mathf.FloorToInt((float)(totalProgress / 3d));
+            float remain = (float)(totalProgress - (harvested * 3d));
+
+            if (harvested > 0)
+                harvestCount += harvested;
+
+            gardens[i].SetGrowthProgress(remain);
+        }
+
+        if (harvestCount > 0)
+        {
+            double earned = harvestCount * GetCoinRewardPerHarvest();
+            if (earned > 0d)
+            {
+                Money += earned;
+                lastOfflineEarned = earned;
+                hasPendingSave = true;
+            }
+        }
+
+        lastOfflineSeconds = effectiveSeconds;
+    }
+
+    private static bool TryParseUtc(string input, out DateTime value)
+    {
+        return DateTime.TryParse(
+            input,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal,
+            out value);
+    }
+
+    private static string FormatOfflineTime(double seconds)
+    {
+        TimeSpan t = TimeSpan.FromSeconds(Math.Max(0d, seconds));
+        if (t.TotalHours >= 1d)
+            return $"{(int)t.TotalHours}h {t.Minutes}m";
+        if (t.TotalMinutes >= 1d)
+            return $"{t.Minutes}m {t.Seconds}s";
+        return $"{Mathf.Max(0, (int)Math.Round(t.TotalSeconds))}s";
     }
 
     private static double ParseDouble(string value, double fallback)
@@ -712,14 +840,13 @@ public class GameManager : MonoBehaviour
 
     private void OnApplicationPause(bool pause)
     {
-        if (pause && hasPendingSave)
+        if (pause)
             SaveGame();
     }
 
     private void OnApplicationQuit()
     {
-        if (hasPendingSave)
-            SaveGame();
+        SaveGame();
     }
 
     private static string GetSaveKey(int slot)
