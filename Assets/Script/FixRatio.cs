@@ -18,7 +18,6 @@ public class FixRatio : MonoBehaviour
     {
         if (targetCamera == null)
         {
-            Debug.LogWarning("FixRatio: targetCamera is null.");
             return;
         }
 

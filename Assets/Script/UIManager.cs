@@ -166,7 +166,7 @@ public class UIManager : MonoBehaviour
     private void UpdateIncome(double value)
     {
         if (incomeText == null) return;
-        incomeText.text = "Auto Sell: " + Format(value) + " /s";
+        incomeText.text = "Auto Sell: " + FormatRate(value) + " /s";
     }
 
     private void UpdateAuto(bool state)
@@ -240,6 +240,14 @@ public class UIManager : MonoBehaviour
             return (num / 1_000d).ToString("F1") + "K";
 
         return num.ToString("F1");
+    }
+
+    private string FormatRate(double num)
+    {
+        if (num < 1d)
+            return num.ToString("F3");
+
+        return Format(num);
     }
 
     private void PlayUiClick(float volumeScale = 1f)

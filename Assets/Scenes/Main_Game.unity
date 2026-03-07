@@ -1658,7 +1658,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 1479816105}
         m_TargetAssemblyTypeName: UIManager, Assembly-CSharp
-        m_MethodName: OnTapSave
+        m_MethodName: OnTapDeleteSave
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -2075,7 +2075,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 1479816105}
         m_TargetAssemblyTypeName: UIManager, Assembly-CSharp
-        m_MethodName: OnTapSave
+        m_MethodName: OnTapLoad
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -5970,12 +5970,13 @@ MonoBehaviour:
   - {fileID: 1632034274}
   - {fileID: 1182742475}
   baseCoinReward: 1
-  baseGrowthPerClick: 0.5
-  coinBonusPerLevel: 0.2
-  clickBonusPerLevel: 0.15
-  growthSpeedBonusPerLevel: 0.25
-  autoInterval: 1
-  autoGrowthMultiplier: 0.2
+  baseGrowthPerClick: 0.12
+  coinBonusPerLevel: 0.08
+  clickBonusPerLevel: 0.03
+  growthSpeedBonusPerLevel: 0.02
+  autoInterval: 2.2
+  autoGrowthMultiplier: 0.3
+  autoSellRipeDelay: 1
   enableOfflineProgress: 1
   maxOfflineHours: 8
   offlineGrowthMultiplier: 0.85
@@ -5989,13 +5990,13 @@ MonoBehaviour:
   - type: 1
     displayName: 
     basePrice: 20
-    priceMultiplier: 1.5
-    maxLevel: 1000
+    priceMultiplier: 1.35
+    maxLevel: 100
   - type: 2
     displayName: 
-    basePrice: 50
-    priceMultiplier: 1.5
-    maxLevel: 75
+    basePrice: 30
+    priceMultiplier: 1.35
+    maxLevel: 100
   - type: 3
     displayName: 
     basePrice: 500
@@ -7024,7 +7025,7 @@ AudioSource:
   m_PlayOnAwake: 1
   m_Volume: 0.5
   m_Pitch: 1
-  Loop: 0
+  Loop: 1
   Mute: 0
   Spatialize: 0
   SpatializePostEffects: 0
@@ -9113,7 +9114,9 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Resoue
+  m_text: 'Continue
+
+'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}

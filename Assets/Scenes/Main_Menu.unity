@@ -1137,7 +1137,7 @@ GameObject:
   - component: {fileID: 318356546}
   - component: {fileID: 318356545}
   m_Layer: 5
-  m_Name: Exit_Button
+  m_Name: close_Button
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1538,7 +1538,7 @@ AudioSource:
   m_PlayOnAwake: 1
   m_Volume: 0.5
   m_Pitch: 1
-  Loop: 0
+  Loop: 1
   Mute: 0
   Spatialize: 0
   SpatializePostEffects: 0
@@ -2729,9 +2729,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a61a7268800e2304fa8f83f0a6e5ec50, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  gameSceneName: Main_Game
   optionsMenu: {fileID: 135551366}
   volumeSlider: {fileID: 251650664}
-  bgmToggle: {fileID: 0}
+  bgmToggle: {fileID: 161208473}
   uiClickSfx: {fileID: 0}
   creditPanel: {fileID: 121833098}
 --- !u!1 &1372017344

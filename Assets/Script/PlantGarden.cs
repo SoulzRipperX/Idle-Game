@@ -22,6 +22,7 @@ public class PlantGarden : MonoBehaviour
 
     private float growthProgress;
     private bool isUnlocked;
+    private float ripeSince = -1f;
 
     public bool IsUnlocked => isUnlocked;
     public float GrowthProgress => growthProgress;
@@ -44,6 +45,7 @@ public class PlantGarden : MonoBehaviour
 
         if (!isUnlocked)
             growthProgress = 0f;
+        ripeSince = -1f;
 
         ApplyInteractableState();
         RefreshVisual();
@@ -51,7 +53,13 @@ public class PlantGarden : MonoBehaviour
 
     public void SetGrowthProgress(float progress)
     {
+        bool wasRipe = IsRipe;
         growthProgress = Mathf.Max(0f, progress);
+        bool nowRipe = IsRipe;
+        if (nowRipe && !wasRipe)
+            ripeSince = Time.time;
+        else if (!nowRipe)
+            ripeSince = -1f;
         RefreshVisual();
     }
 
@@ -65,16 +73,26 @@ public class PlantGarden : MonoBehaviour
         if (growthProgress > 3f)
             growthProgress = 3f;
 
+        if (!wasRipe && IsRipe)
+            ripeSince = Time.time;
+
         RefreshVisual();
         return !wasRipe && IsRipe;
     }
 
-    public bool HarvestAndReset()
+    public bool HarvestAndReset(float minRipeSeconds = 0f)
     {
         if (!IsRipe)
             return false;
 
+        if (minRipeSeconds > 0f)
+        {
+            if (ripeSince < 0f || Time.time - ripeSince < minRipeSeconds)
+                return false;
+        }
+
         growthProgress = 0f;
+        ripeSince = -1f;
         RefreshVisual();
         return true;
     }

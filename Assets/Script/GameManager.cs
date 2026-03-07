@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Diagnostics;
+using Diagnostics = System.Diagnostics;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -51,14 +51,15 @@ public class GameManager : MonoBehaviour
 
     [Header("Economy")]
     [SerializeField] private double baseCoinReward = 1d;
-    [SerializeField] private double baseGrowthPerClick = 0.2d;
+    [SerializeField] private double baseGrowthPerClick = 0.12d;
     [SerializeField] private double coinBonusPerLevel = 0.08d;
-    [SerializeField] private double clickBonusPerLevel = 0.08d;
-    [SerializeField] private double growthSpeedBonusPerLevel = 0.1d;
+    [SerializeField] private double clickBonusPerLevel = 0.03d;
+    [SerializeField] private double growthSpeedBonusPerLevel = 0.02d;
 
     [Header("Auto")]
     [SerializeField] private float autoInterval = 2.2f;
     [SerializeField] private float autoGrowthMultiplier = 0.3f;
+    [SerializeField] private float autoSellRipeDelay = 2.0f;
 
     [Header("Offline Progress")]
     [SerializeField] private bool enableOfflineProgress = true;
@@ -89,6 +90,7 @@ public class GameManager : MonoBehaviour
     private int activeSaveSlot = 1;
     private double lastOfflineEarned;
     private double lastOfflineSeconds;
+    private bool lastLoadSuccess;
 
     private void Awake()
     {
@@ -105,9 +107,14 @@ public class GameManager : MonoBehaviour
         EnsureUpgradeDictionary();
     }
 
+    private void OnValidate()
+    {
+        EnsureUpgradeBalanceDefaults();
+    }
+
     private void Start()
     {
-        LoadGame();
+        LoadGame(true);
         RefreshAll();
     }
 
@@ -133,7 +140,7 @@ public class GameManager : MonoBehaviour
 
                 while (autoSellTimer >= sellInterval)
                 {
-                    SellAllRipeInternal();
+                    SellAllRipeInternal(true, Mathf.Max(0f, autoSellRipeDelay));
                     autoSellTimer -= sellInterval;
                 }
             }
@@ -189,10 +196,10 @@ public class GameManager : MonoBehaviour
 
     public double SellAllRipe()
     {
-        return SellAllRipeInternal();
+        return SellAllRipeInternal(false, 0f);
     }
 
-    private double SellAllRipeInternal()
+    private double SellAllRipeInternal(bool playSfx, float minRipeSeconds)
     {
         int ripeCount = 0;
         int activeGardens = GetUnlockedGardenCount();
@@ -202,7 +209,7 @@ public class GameManager : MonoBehaviour
             if (gardens[i] == null || i >= activeGardens)
                 continue;
 
-            if (gardens[i].HarvestAndReset())
+            if (gardens[i].HarvestAndReset(minRipeSeconds))
                 ripeCount++;
         }
 
@@ -214,6 +221,8 @@ public class GameManager : MonoBehaviour
 
         double earned = ripeCount * GetCoinRewardPerHarvest();
         AddMoney(earned);
+        if (playSfx && AudioManager.Instance != null)
+            AudioManager.Instance.PlaySell();
         OnGameStateChanged?.Invoke();
         return earned;
     }
@@ -355,7 +364,7 @@ public class GameManager : MonoBehaviour
         if (level <= 0)
             return 999f;
 
-        return Mathf.Max(0.35f, 2.2f - (0.2f * level));
+        return Mathf.Max(1.2f, 6f - (0.4f * level));
     }
 
     public string FormatMoney(double value)
@@ -378,14 +387,16 @@ public class GameManager : MonoBehaviour
 
     public void ManualLoad()
     {
-        LoadGame();
+        LoadGame(false);
         autoTimer = 0f;
         autoSellTimer = 0f;
         RefreshAll();
-        if (lastOfflineEarned > 0d)
-            OnSaveMessage?.Invoke($"Loaded +{FormatMoney(lastOfflineEarned)} ({FormatOfflineTime(lastOfflineSeconds)} offline)");
-        else
-            OnSaveMessage?.Invoke($"Loaded (Slot {activeSaveSlot})");
+        if (!lastLoadSuccess)
+        {
+            OnSaveMessage?.Invoke($"Slot {activeSaveSlot} is empty");
+            return;
+        }
+        OnSaveMessage?.Invoke($"Loaded (Slot {activeSaveSlot})");
     }
 
     public int GetActiveSaveSlot()
@@ -435,18 +446,18 @@ public class GameManager : MonoBehaviour
         try
         {
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
-            Process.Start("explorer.exe", folder.Replace("/", "\\"));
+            Diagnostics.Process.Start("explorer.exe", folder.Replace("/", "\\"));
 #elif UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
-            Process.Start("open", "\"" + folder + "\"");
+            Diagnostics.Process.Start("open", "\"" + folder + "\"");
 #elif UNITY_STANDALONE_LINUX || UNITY_EDITOR_LINUX
-            Process.Start("xdg-open", "\"" + folder + "\"");
+            Diagnostics.Process.Start("xdg-open", "\"" + folder + "\"");
 #else
             Application.OpenURL("file://" + folder);
 #endif
         }
-        catch (Exception e)
+        catch (Exception)
         {
-            UnityEngine.Debug.LogWarning("Cannot open save folder: " + e.Message);
+            OnSaveMessage?.Invoke("Cannot open save folder.");
         }
 #endif
     }
@@ -538,7 +549,8 @@ public class GameManager : MonoBehaviour
 
     private float GetAutoGrowthPerTick()
     {
-        return (float)(GetManualGrowthPerClick() * autoGrowthMultiplier * GetGrowthSpeedMultiplier());
+        // Auto growth should not be affected by click/growth upgrades.
+        return (float)(baseGrowthPerClick * autoGrowthMultiplier);
     }
 
     private void AddMoney(double amount)
@@ -597,8 +609,17 @@ public class GameManager : MonoBehaviour
         }
 
         double growthPerSecondPerGarden = GetAutoGrowthPerTick() / Mathf.Max(0.3f, autoInterval);
-        double harvestPerSecondPerGarden = growthPerSecondPerGarden / 3d;
-        IncomePerSecond = activeGardens * harvestPerSecondPerGarden * GetCoinRewardPerHarvest();
+        if (growthPerSecondPerGarden <= 0d)
+        {
+            IncomePerSecond = 0d;
+            OnIncomeChanged?.Invoke(IncomePerSecond);
+            return;
+        }
+
+        double timeToGrow = 3d / growthPerSecondPerGarden;
+        double sellDelay = Math.Max(autoSellRipeDelay, GetAutoSellInterval());
+        double cycleSeconds = timeToGrow + sellDelay;
+        IncomePerSecond = activeGardens * (GetCoinRewardPerHarvest() / Math.Max(0.01d, cycleSeconds));
         OnIncomeChanged?.Invoke(IncomePerSecond);
     }
 
@@ -611,6 +632,70 @@ public class GameManager : MonoBehaviour
         }
 
         return null;
+    }
+
+    private void EnsureUpgradeBalanceDefaults()
+    {
+        if (upgradeBalances == null)
+            return;
+
+        UpgradeType[] types = (UpgradeType[])Enum.GetValues(typeof(UpgradeType));
+        List<UpgradeBalance> balanced = new List<UpgradeBalance>(types.Length);
+
+        foreach (UpgradeType type in types)
+        {
+            UpgradeBalance cfg = null;
+            for (int i = 0; i < upgradeBalances.Length; i++)
+            {
+                if (upgradeBalances[i] != null && upgradeBalances[i].type == type)
+                {
+                    cfg = upgradeBalances[i];
+                    break;
+                }
+            }
+
+            if (cfg == null)
+                cfg = new UpgradeBalance { type = type };
+
+            ApplyUpgradeDefaults(cfg);
+            balanced.Add(cfg);
+        }
+
+        upgradeBalances = balanced.ToArray();
+    }
+
+    private void ApplyUpgradeDefaults(UpgradeBalance cfg)
+    {
+        if (cfg == null)
+            return;
+
+        (double basePrice, double priceMultiplier, int maxLevel) def = GetDefaultUpgradeBalance(cfg.type);
+
+        if (cfg.basePrice <= 0d)
+            cfg.basePrice = def.basePrice;
+        if (cfg.priceMultiplier <= 1.01d)
+            cfg.priceMultiplier = def.priceMultiplier;
+        if (cfg.maxLevel <= 0)
+            cfg.maxLevel = def.maxLevel;
+    }
+
+    private (double basePrice, double priceMultiplier, int maxLevel) GetDefaultUpgradeBalance(UpgradeType type)
+    {
+        switch (type)
+        {
+            case UpgradeType.CoinValue:
+                return (15d, 1.25d, 1000);
+            case UpgradeType.ClickPower:
+                return (20d, 1.35d, 100);
+            case UpgradeType.GrowthSpeed:
+                return (30d, 1.35d, 100);
+            case UpgradeType.GardenUnlock:
+                return (500d, 2.0d, 3);
+            case UpgradeType.AutoSell:
+                return (1000d, 1.25d, 10);
+            default:
+                return (10d, 1.4d, 20);
+        }
     }
 
     private void EnsureUpgradeDictionary()
@@ -673,8 +758,9 @@ public class GameManager : MonoBehaviour
         hasPendingSave = false;
     }
 
-    private void LoadGame()
+    private void LoadGame(bool applyOfflineProgress)
     {
+        lastLoadSuccess = false;
         lastOfflineEarned = 0d;
         lastOfflineSeconds = 0d;
         EnsureUpgradeDictionary();
@@ -692,6 +778,7 @@ public class GameManager : MonoBehaviour
         if (data == null)
             return;
 
+        lastLoadSuccess = true;
         Money = ParseDouble(data.money, 0d);
         AutoEnabled = data.autoEnabled == 1;
 
@@ -728,7 +815,8 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        ApplyOfflineProgress(data.lastSavedUtc);
+        if (applyOfflineProgress)
+            ApplyOfflineProgress(data.lastSavedUtc);
 
         hasPendingSave = false;
     }

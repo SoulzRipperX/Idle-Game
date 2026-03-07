@@ -1,3 +1,4 @@
+using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -115,8 +116,6 @@ public class MenuController : MonoBehaviour
         PlayUiClick();
         if (creditPanel != null)
             creditPanel.SetActive(true);
-        else
-            Debug.LogWarning("MenuController: creditPanel is not assigned.");
     }
 
     public void CloseCredits()
@@ -124,8 +123,6 @@ public class MenuController : MonoBehaviour
         PlayUiClick();
         if (creditPanel != null)
             creditPanel.SetActive(false);
-        else
-            Debug.LogWarning("MenuController: creditPanel is not assigned.");
     }
 
     public void OnBgmToggleChanged(bool isOn)
