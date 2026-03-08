@@ -93,7 +93,6 @@ public class UIManager : MonoBehaviour
 
         GameManager.Instance.OpenSaveFolder();
 #if UNITY_WEBGL || UNITY_ANDROID || UNITY_IOS
-        // On these platforms GameManager sends a platform-safe message.
 #else
         ShowSaveMessage("Open: " + GameManager.Instance.GetSaveFolderPath());
 #endif
